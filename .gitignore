@@ -30,3 +30,26 @@
 *.exe
 *.out
 *.app
+
+# Debug
+*.pdb
+*.exe.*
+*.idb
+
+# Type info
+*.dt
+*.dt.*
+
+# Module
+*.ifc
+*.ifc.*
+*.module.*
+
+# Logs
+*.tlog
+
+# Visual studio files
+.vs/**/*.*
+
+# Custom
+UnitTestSuit.vcxproj.FileListAbsolute.txt
