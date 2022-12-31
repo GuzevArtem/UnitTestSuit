@@ -513,10 +513,6 @@ export namespace Testing {
 			}
 			if (!capturedExceptions.empty()) {
 				throw AssertAndException(capturedExceptions);
-			} else {
-				if constexpr (t_PrintAllExceptions) {
-					throw IgnoredException(capturedExceptions);
-				}
 			}
 		}
 

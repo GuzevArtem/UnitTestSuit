@@ -4,6 +4,8 @@ import Testing;
 
 namespace Testing {
 
+	constexpr bool PRINT_IGNORED_EXCEPTIONS = true;
+
 	template<typename Type>
 	class MyTestClass : public TestClassTyped<MyTestClass<Type>, Type> {
 		typedef TestClassTyped<MyTestClass<Type>, Type> inherited;
@@ -22,37 +24,37 @@ namespace Testing {
 
 		new UnitTestTyped<Type>("TypedTestOr", [](TestContextTyped<Type>& ctx) -> void {
 			Type object = ctx.createTestObject();
-			Assert::Or(
-				[object]() { Assert::notZero(object); },
-				[object]() { Assert::notEquals(object, 0); },
-				[object]() { Assert::equals(object, 0); }
+			Assert::Or<PRINT_IGNORED_EXCEPTIONS>(
+				[&object]() { Assert::notZero(object); },
+				[&object]() { Assert::notEquals(object, 0); },
+				[&object]() { Assert::equals(object, 0); }
 				);
 		}),
 
 		new UnitTestTyped<Type>("TypedTestNor", [](TestContextTyped<Type>& ctx) -> void {
 			Type object = ctx.createTestObject();
-			Assert::Nor(
-				[object]() { Assert::notZero(object); },
-				[object]() { Assert::notEquals(object, 0); },
-				[object]() { Assert::equals(object, 1); }
+			Assert::Nor<PRINT_IGNORED_EXCEPTIONS>(
+				[&object]() { Assert::notZero(object); },
+				[&object]() { Assert::notEquals(object, 0); },
+				[&object]() { Assert::equals(object, 1); }
 			);
 		}),
 
 		new UnitTestTyped<Type>("TypedTestAnd", [](TestContextTyped<Type>& ctx) -> void {
 			Type object = ctx.createTestObject();
-			Assert::And(
-				[object]() { Assert::isZero(object); },
-				[object]() { Assert::notEquals(object, 1); },
-				[object]() { Assert::equals(object, 0); }
+			Assert::And<PRINT_IGNORED_EXCEPTIONS>(
+				[&object]() { Assert::isZero(object); },
+				[&object]() { Assert::notEquals(object, 1); },
+				[&object]() { Assert::equals(object, 0); }
 			);
 		}),
 
 			new UnitTestTyped<Type>("TypedTestNand", [](TestContextTyped<Type>& ctx) -> void {
 			Type object = ctx.createTestObject();
-			Assert::Nand(
-				[object]() { Assert::notZero(object); },
-				[object]() { Assert::notEquals(object, 0); },
-				[object]() { Assert::equals(object, 1); }
+			Assert::Nand<PRINT_IGNORED_EXCEPTIONS>(
+				[&object]() { Assert::notZero(object); },
+				[&object]() { Assert::notEquals(object, 0); },
+				[&object]() { Assert::equals(object, 1); }
 			);
 		}),
 	}) {}
@@ -65,4 +67,3 @@ int main() {
 
 	Testing::TestSuit::instance()->run();
 }
-

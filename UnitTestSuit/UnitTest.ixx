@@ -48,8 +48,13 @@ export namespace Testing {
 				ctx->stop();
 				std::cerr << std::format("STOPPED:\t{}\n", e.reason());
 			} catch (const IgnoredException& e) {
-				ctx->ignore();
-				std::cerr << std::format("IGNORED:\t{}\n", e.reason());
+				if (e.hasAny()) {
+					ctx->finish();
+					std::cerr << std::format("COMPLETED\t{}\n", e.reason());
+				} else {
+					ctx->ignore();
+					std::cerr << std::format("IGNORED:\t{}\n", e.reason());
+				}
 			} catch (const TestException& e) {
 				ctx->processException(e);
 				std::cerr << std::format("FAIL:\t{}\n", e.reason());

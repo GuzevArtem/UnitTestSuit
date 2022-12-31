@@ -57,11 +57,15 @@ export namespace Testing {
 		IgnoredException(const std::vector<TestException>& caused) : m_caused(caused) {}
 
 		[[nodiscard]] virtual std::string reason() const {
-			std::string result = std::format("IgnoredException{}", m_caused.empty() ? ": Execution skipped!" : ":");
+			std::string result = std::format("\n\tIgnoredException{}", m_caused.empty() ? ": Execution skipped!" : ":");
 			for (TestException e : m_caused) {
-				result.append(std::format("\n\tCaused by: {}", e.reason()));
+				result.append(std::format("\n\t\tCaused by: {}", e.reason()));
 			}
 			return result;
+		}
+
+		[[nodiscard]] bool hasAny() const {
+			return !m_caused.empty();
 		}
 	};
 
