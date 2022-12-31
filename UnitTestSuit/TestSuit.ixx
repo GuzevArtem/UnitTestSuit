@@ -16,7 +16,7 @@ export namespace Testing {
 	export class TestSuit {
 	
 	public:
-		~TestSuit() {
+		virtual ~TestSuit() {
 			for (auto testClass : m_testClasses) {
 				delete testClass;
 			}

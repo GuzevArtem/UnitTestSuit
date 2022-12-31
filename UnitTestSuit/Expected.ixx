@@ -13,14 +13,15 @@ export namespace Testing {
 
 	export
 	template<typename ExceptionType>
-	class ExpectedFailedException : public TestException {
-
-	private:
-		std::exception* m_caused;
-
+	class ExpectedFailedException : public std::exception {
+		typedef std::exception inherited;
 	public:
+		ExpectedFailedException(std::exception* caused = nullptr) : inherited(caused ? caused->what() : "No exception raised.") {}
+
 		[[nodiscard]] virtual std::string reason() const override {
-			return m_caused ? std::format("ExpectedFailedException: expeted \"{}\", but raised {}", TypeParse<ExceptionType>::name, m_caused->what()) : std::format("ExpectedFailedException: ");
+			return inherited::what()
+				? std::format("ExpectedFailedException: expeted \"{}\", but raised {}.", static_cast<char const*>(TypeParse<ExceptionType>::name), inherited::what())
+				: std::format("ExpectedFailedException: {}", inherited::what());
 		}
 	};
 
@@ -33,7 +34,7 @@ export namespace Testing {
 			try {
 				f();
 			} catch (ExceptionType e) {
-				return;
+				return;	//we got what we want
 			} catch (std::exception e) {
 				throw new ExpectedFailedException<ExceptionType>(e);
 			}

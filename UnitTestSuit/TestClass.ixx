@@ -32,6 +32,7 @@ export namespace Testing {
 		size_t suceededTestsCount = 0;
 		size_t failedTestsCount = 0;
 		size_t stoppedTestsCount = 0;
+		size_t ignoredTestsCount = 0;
 
 		void reset() {
 			totalTestsCount = 0;
@@ -39,6 +40,7 @@ export namespace Testing {
 			suceededTestsCount = 0;
 			failedTestsCount = 0;
 			stoppedTestsCount = 0;
+			ignoredTestsCount = 0;
 		}
 	};
 
@@ -51,7 +53,7 @@ export namespace Testing {
 	public:
 		TestClassInner(char const* name, std::vector<UnitTestInterface*> tests) : m_name(name), m_unitTests(tests) {}
 
-		~TestClassInner() {
+		virtual ~TestClassInner() {
 			for (UnitTestInterface* test : m_unitTests) {
 				delete test;
 			}
@@ -68,6 +70,10 @@ export namespace Testing {
 					case Stopped:
 						m_data.startedTestsCount++;
 						m_data.stoppedTestsCount++;
+						break;
+					case Ignored:
+						m_data.startedTestsCount++;
+						m_data.ignoredTestsCount++;
 						break;
 					case Crashed:
 						m_data.startedTestsCount++;
@@ -95,7 +101,7 @@ export namespace Testing {
 		}
 
 		virtual void printData() const override {
-			std::cout << std::format("Class [{}] results:\n\tCompleted tests: {}/{}\n\tFailed tests: {}/{}\n\tIgnored tests: {}/{}\n", name(), m_data.suceededTestsCount, m_data.totalTestsCount, m_data.failedTestsCount, m_data.totalTestsCount, m_data.stoppedTestsCount, m_data.totalTestsCount);
+			std::cout << std::format("Class [{}] results:\n\tCompleted tests: {}/{}\n\tFailed tests: {}/{}\n\tIgnored tests: {}/{}\n", name(), m_data.suceededTestsCount, m_data.totalTestsCount, m_data.failedTestsCount, m_data.totalTestsCount, m_data.ignoredTestsCount, m_data.totalTestsCount);
 		}
 	};
 

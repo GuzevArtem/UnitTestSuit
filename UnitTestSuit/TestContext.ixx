@@ -17,7 +17,8 @@ export namespace Testing {
 		Suceeded,
 		Failed,
 		Crashed,
-		Stopped
+		Stopped,
+		Ignored
 	};
 
 	export class TestContext {
@@ -60,15 +61,19 @@ export namespace Testing {
 			m_state = Suceeded;
 		}
 
-		virtual void processTestException(const TestException& e) {
+		virtual void ignore() {
+			m_state = Ignored;
+		}
+
+		virtual void processException(const TestException& e) {
 			m_state = Failed;
 		}
 
-		virtual void processGeneralException(const std::exception& e) {
+		virtual void processException(const std::exception& e) {
 			m_state = Crashed;
 		}
 
-		virtual void terminate() {
+		virtual void terminate(const std::exception& e) {
 			m_state = Crashed;
 		}
 	};

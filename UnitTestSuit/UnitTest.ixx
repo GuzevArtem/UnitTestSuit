@@ -9,10 +9,11 @@ export module UnitTest;
 
 import TestContext;
 import TestException;
+import Assert;
 
 export namespace Testing {
 	template<typename T>
-	concept TestContextType = std::derived_from<T, TestContext> || std::same_as<T, TestContext>;
+	concept TestContextType = std::is_base_of_v<TestContext, T> || std::same_as<T, TestContext>;
 
 	export
 		class UnitTestInterface {
@@ -27,32 +28,44 @@ export namespace Testing {
 	private:
 		char const* m_name;
 		std::function<void(ContextType&)> m_testFunction;
-		ContextType context;
+		ContextType* context;
 	public:
-		UnitTestBase(char const* name, std::function<void(ContextType&)> func) : m_name(name), m_testFunction(func) {}
-
+		UnitTestBase(char const* name, std::function<void(ContextType&)>& func) : context(new ContextType()), m_name(name), m_testFunction(func) {}
+		virtual ~UnitTestBase() {
+			delete context;
+		}
 	public:
 		virtual void run() override {
-			context.reset();
+			TestContext* ctx = static_cast<TestContext*>(context);
+			ctx->reset();
 			try {
 				std::cout << std::format("\tStarting test: [{}]\t", m_name);
-				context.start();
-				m_testFunction(context);
-				context.finish();
+				ctx->start();
+				m_testFunction(*context);
+				ctx->finish();
 				std::cout << std::format("COMPLETED\n", m_name);
+			} catch (const TestStopException& e) {
+				ctx->stop();
+				std::cerr << std::format("STOPPED:\t{}\n", e.reason());
+			} catch (const IgnoredException& e) {
+				ctx->ignore();
+				std::cerr << std::format("IGNORED:\t{}\n", e.reason());
 			} catch (const TestException& e) {
-				context.processTestException(e);
+				ctx->processException(e);
+				std::cerr << std::format("FAIL:\t{}\n", e.reason());
+			} catch (const AssertException& e) {
+				ctx->processException(TestException(e.reason()));
+				std::cerr << std::format("FAIL:\t{}\n", e.reason());
+			} catch (const UnexpectedException& e) {
+				ctx->processException(TestException(e.reason()));
 				std::cerr << std::format("FAIL:\t{}\n", e.reason());
 			} catch (const std::exception& e) {
-				context.processGeneralException(e);
+				ctx->terminate(e);
 				std::cerr << std::format("FAIL:\t{}\n", e.what());
-			} catch (...) {
-				context.terminate();
-				std::cerr << "FAIL:\tUnknown error\n";
 			}
 		}
 
-		virtual TestState getState() const override { return context.state(); }
+		virtual TestState getState() const override { return static_cast<TestContext*>(context)->state(); }
 	};
 
 	export class UnitTest : public UnitTestBase<TestContext> {
