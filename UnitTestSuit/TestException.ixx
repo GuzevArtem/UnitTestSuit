@@ -5,28 +5,40 @@ module;
 #include <exception>
 #include <string>
 #include <unordered_map>
+#include <stacktrace>
 
 export module TestException;
 
-namespace Testing {
-	class TestException;
-}
-
-template<> struct std::hash<Testing::TestException*> {
-	std::size_t operator()(Testing::TestException* const& te) const noexcept {
-		return static_cast<std::size_t>(reinterpret_cast<std::uintptr_t>(te));
-	}
-};
-
 export namespace Testing {
 
-	export class TestException : std::exception {
+	export size_t InitialStackTraceDepth = 8;
+
+	export class BaseException : public std::exception {
 		typedef std::exception inherited;
+
+	public:
+		BaseException() : inherited() {}
+		BaseException(char const* what) : inherited(what) {}
+		BaseException(const std::string& caused) : inherited(caused.c_str()) {}
+		BaseException(const std::exception& caused) : inherited(caused) {}
+
+		[[nodiscard]] virtual std::string reason() const {
+			return std::format("{}: {}", inherited::what(), std::to_string(where<2>()));
+		};
+
+		template<size_t t_StackToSkip = 0>
+		[[nodiscard]] std::stacktrace where() const {
+			return std::stacktrace::current(t_StackToSkip);
+		}
+	};
+
+	export class TestException : public BaseException {
+		typedef BaseException inherited;
 	private:
 		std::string m_errorMessage;
 
 	public:
-		TestException(const std::string& what) : inherited(), m_errorMessage(what) {}
+		TestException(const std::string& what) : inherited(what.c_str()), m_errorMessage(what) {}
 
 		[[nodiscard]] virtual std::string reason() const {
 			return m_errorMessage;
@@ -37,28 +49,32 @@ export namespace Testing {
 		}
 	};
 
-	export class UnexpectedException : public std::exception {
-		typedef std::exception inherited;
+	export class UnexpectedException : public BaseException {
+		typedef BaseException inherited;
 	public:
-		UnexpectedException(const std::exception& e) : inherited(e) {};
+		UnexpectedException(const BaseException& e) : inherited(e) {};
 
 		[[nodiscard]] virtual std::string reason() const {
 			return std::format("UnexpectedException: caused by {}", inherited::what());
 		}
+
+		[[nodiscard]] virtual std::stacktrace where() const {
+			return std::stacktrace::current();
+		}
 	};
 
-	export class IgnoredException : public std::exception {
-		typedef std::exception inherited;
+	export class IgnoredException : public BaseException {
+		typedef BaseException inherited;
 	private:
-		std::vector<TestException> m_caused;
+		std::vector<BaseException> m_caused;
 
 	public:
 		IgnoredException() : m_caused() {}
-		IgnoredException(const std::vector<TestException>& caused) : m_caused(caused) {}
+		IgnoredException(const std::vector<BaseException>& caused) : m_caused(caused) {}
 
 		[[nodiscard]] virtual std::string reason() const {
 			std::string result = std::format("\n\tIgnoredException{}", m_caused.empty() ? ": Execution skipped!" : ":");
-			for (TestException e : m_caused) {
+			for (BaseException e : m_caused) {
 				result.append(std::format("\n\t\tCaused by: {}", e.reason()));
 			}
 			return result;
@@ -67,10 +83,14 @@ export namespace Testing {
 		[[nodiscard]] bool hasAny() const {
 			return !m_caused.empty();
 		}
+
+		[[nodiscard]] virtual std::stacktrace where() const {
+			return std::stacktrace::current();
+		}
 	};
 
-	export class TestStopException : public std::exception {
-		typedef std::exception inherited;
+	export class TestStopException : public BaseException {
+		typedef BaseException inherited;
 	private:
 
 	public:
@@ -78,6 +98,10 @@ export namespace Testing {
 
 		[[nodiscard]] virtual std::string reason() const {
 			return std::format("TestStopException: {}", inherited::what());
+		}
+
+		[[nodiscard]] virtual std::stacktrace where() const {
+			return std::stacktrace::current();
 		}
 	};
 }

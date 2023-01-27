@@ -34,6 +34,7 @@ export namespace Testing {
 
 	public:
 		void run() {
+
 			for (TestClassBase* cls : m_testClasses) {
 				try {
 					std::cout << std::format("Starting test class: [{}]\n", cls->name());

@@ -1,6 +1,7 @@
 module;
 
 #include <exception>
+#include <stacktrace>
 #include <string>
 #include <format>
 
@@ -12,17 +13,31 @@ import TypeParse;
 export namespace Testing {
 
 	export
-	template<typename ExceptionType>
-	class ExpectedFailedException : public std::exception {
-		typedef std::exception inherited;
+		template<typename ExceptionType, bool t_AnyException>
+	class ExpectedFailedException : public BaseException {
+		typedef BaseException inherited;
 	public:
-		ExpectedFailedException(std::exception* caused = nullptr) : inherited(caused ? caused->what() : "No exception raised.") {}
-
 		[[nodiscard]] virtual std::string reason() const override {
-			return inherited::what()
-				? std::format("ExpectedFailedException: expeted \"{}\", but raised {}.", static_cast<char const*>(TypeParse<ExceptionType>::name), inherited::what())
-				: std::format("ExpectedFailedException: {}", inherited::what());
+			if constexpr (t_AnyException) {
+				return std::format("ExpectedFailedException: expeted \"{}\", but raised {}.\n{}", static_cast<char const*>(TypeParse<ExceptionType>::name), inherited::what(), std::to_string(inherited::where()));
+			} else {
+				std::format("ExpectedFailedException: {}\n{}", inherited::what(), std::to_string(inherited::where()));
+			}
 		}
+	};
+
+	export
+		template<typename ExceptionType>
+	class ExpectedFailedException<ExceptionType, true> : public BaseException {
+	public:
+		ExpectedFailedException(const std::exception& caused) : inherited(caused) {}
+	};
+
+	export
+		template<typename ExceptionType>
+	class ExpectedFailedException<ExceptionType, false> : public BaseException {
+	public:
+		ExpectedFailedException() : inherited("No exception raised.") {}
 	};
 
 	export
@@ -33,12 +48,13 @@ export namespace Testing {
 		void during(Function& f) {
 			try {
 				f();
-			} catch (ExceptionType e) {
+			} catch (const ExceptionType& e) {
 				return;	//we got what we want
-			} catch (std::exception e) {
-				throw new ExpectedFailedException<ExceptionType>(e);
+			} catch (const std::exception& e) {
+				//any other exception
+				throw ExpectedFailedException<ExceptionType, true>(e);
 			}
-			throw new ExpectedFailedException<ExceptionType>();
+			throw ExpectedFailedException<ExceptionType, false>();
 		}
 	};
 }

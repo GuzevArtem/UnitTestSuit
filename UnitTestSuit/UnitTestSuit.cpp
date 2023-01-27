@@ -1,4 +1,6 @@
 #include <iostream>
+#include <format>
+#include <chrono>
 
 import Testing;
 
@@ -49,13 +51,25 @@ namespace Testing {
 			);
 		}),
 
-			new UnitTestTyped<Type>("TypedTestNand", [](TestContextTyped<Type>& ctx) -> void {
+		new UnitTestTyped<Type>("TypedTestNand", [](TestContextTyped<Type>& ctx) -> void {
 			Type object = ctx.createTestObject();
 			Assert::Nand<PRINT_IGNORED_EXCEPTIONS>(
 				[&object]() { Assert::notZero(object); },
 				[&object]() { Assert::notEquals(object, 0); },
 				[&object]() { Assert::equals(object, 1); }
 			);
+		}),
+
+		new UnitTestTyped<Type>("BenchmarkedTest", [](TestContextTyped<Type>& ctx) -> void {
+			Type object = ctx.createTestObject();
+			auto foo = [](Type& obj) {
+				std::this_thread::sleep_for(std::chrono::nanoseconds(10*(++obj)));
+			};
+			auto result = Benchmark::function(100, foo, object);
+			std::cout << std::format("\n100 iterations:   [{}]", result);
+
+			result = Benchmark::function(foo, object);
+			std::cout << std::format("\nsingle iteration: [{}]", result);
 		}),
 	}) {}
 };

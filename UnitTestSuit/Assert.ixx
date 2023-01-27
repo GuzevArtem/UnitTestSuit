@@ -1,6 +1,7 @@
 module;
 
 #include <exception>
+#include <stacktrace>
 #include <vector>
 #include <string>
 #include <format>
@@ -30,11 +31,11 @@ export namespace Testing {
 }
 
 export namespace Testing {
-	class AssertException : public std::exception {
-		typedef std::exception inherited;
+	class AssertException : public BaseException {
+		typedef BaseException inherited;
 	public:
 		[[nodiscard]] virtual std::string reason() const {
-			return {};
+			return std::format("{}", std::to_string(inherited::where()));
 		}
 
 		[[nodiscard]] virtual char const* what() const {
@@ -47,7 +48,7 @@ export namespace Testing {
 	public:
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertFailedException: {}", inherited::reason());
+			return std::format("AssertFailedException\n{}", inherited::reason());
 		}
 	};
 
@@ -62,7 +63,7 @@ export namespace Testing {
 		AssertEqualsException(T1 expected, T2 actual) : expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertEqualsException: expected to be {} but was {}{}{}", expected, actual, inherited::reason().size() ? " \n " : "", inherited::reason());
+			return std::format("AssertEqualsException: expected to be {} but was {}\n{}", expected, actual, inherited::reason());
 		}
 	};
 
@@ -74,7 +75,7 @@ export namespace Testing {
 		AssertSameException() {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertSameException: expected {} to be same type as {}", TypeParse<T1>::name, TypeParse<T2>::name);
+			return std::format("AssertSameException: expected {} to be same type as {}\n{}", TypeParse<T1>::name, TypeParse<T2>::name, inherited::reason());
 		}
 	};
 
@@ -91,11 +92,11 @@ export namespace Testing {
 
 		[[nodiscard]] virtual std::string reason() const override {
 			if (expected && actual) {
-				return std::format("AssertSameException: expected [0x{:h}]{} to point at same object as [0x{:#h}]{}", expected, *expected, actual, *actual);
+				return std::format("AssertSameException: expected [0x{:h}]{} to point at same object as [0x{:#h}]{}\n{}", expected, *expected, actual, *actual, inherited::reason());
 			} else if (expected) {
-				return std::format("AssertSameException: expected [0x{:h}]{} to point at same object as [0x00000000](nullptr)", expected, *expected);
+				return std::format("AssertSameException: expected [0x{:h}]{} to point at same object as [0x00000000](nullptr)\n{}", expected, *expected, inherited::reason());
 			} else if (actual) {
-				return std::format("AssertSameException: expected [0x00000000](nullptr) to point at same object as [0x{:#h}]{}", actual, *actual);
+				return std::format("AssertSameException: expected [0x00000000](nullptr) to point at same object as [0x{:#h}]{}\n{}", actual, *actual, inherited::reason());
 			}
 			//both are nullptr, so they are same
 			throw std::runtime_error("Both values are nullpr, but AssertSame failed!");
@@ -110,7 +111,7 @@ export namespace Testing {
 		AssertNotSameException() {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertNotSameException: expected {} to be not same type as {}", TypeParse<T1>::name, TypeParse<T2>::name);
+			return std::format("AssertNotSameException: expected {} to be not same type as {}\n{}", TypeParse<T1>::name, TypeParse<T2>::name, inherited::reason());
 		}
 	};
 
@@ -127,12 +128,12 @@ export namespace Testing {
 
 		[[nodiscard]] virtual std::string reason() const override {
 			if (expected && actual) {
-				return std::format("AssertNotSameException: expected [0x{:h}]{} to not point at same object as [0x{:#h}]{}", expected, *expected, actual, *actual);
+				return std::format("AssertNotSameException: expected [0x{:h}]{} to not point at same object as [0x{:#h}]{}\n{}", expected, *expected, actual, *actual, inherited::reason());
 			} else if (!expected && !actual) {
-				return "AssertNotSameException: expected [0x00000000](nullptr) to not point at same object as [0x00000000](nullptr)";
+				return std::format("AssertNotSameException: expected [0x00000000](nullptr) to not point at same object as [0x00000000](nullptr)\n{}", inherited::reason());
 			}
 			//one is not nullptr, so ...
-			throw std::runtime_error("Only one of values is nullpr, but AssertNotSame failed!");
+			throw std::runtime_error(std::format("Only one of values is nullpr, but AssertNotSame failed!\n{}", inherited::reason()));
 		}
 	};
 
@@ -147,7 +148,7 @@ export namespace Testing {
 		AssertNotEqualsException(T1 expected, T2 actual) : expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertNotEqualsException: expected not to be {} but was {}{}{}", expected, actual, inherited::reason().size() ? " \n " : "", inherited::reason());
+			return std::format("AssertNotEqualsException: expected not to be {} but was {}\n{}", expected, actual, inherited::reason());
 		}
 	};
 
@@ -158,7 +159,7 @@ export namespace Testing {
 
 	public:
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertInheritenceException: expected {} to base class of {}", TypeParse<Base>::name, TypeParse<Derived>::name);
+			return std::format("AssertInheritenceException: expected {} to base class of {}\n{}", TypeParse<Base>::name, TypeParse<Derived>::name, inherited::reason());
 		}
 	};
 
@@ -166,15 +167,15 @@ export namespace Testing {
 		class AssertOrException : public AssertException {
 		typedef AssertException inherited;
 		private:
-			std::vector<TestException> m_caused;
+			std::vector<BaseException> m_caused;
 
 		public:
-			AssertOrException(const std::vector<TestException>& caused) : m_caused(caused) {}
+			AssertOrException(const std::vector<BaseException>& caused) : m_caused(caused) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertOrException: all executions failed");
-				for (const TestException& e : m_caused) {
-					result.append(std::format("\n\t\tCaused by: {}", e.reason()));
+				for (const BaseException& e : m_caused) {
+					result.append(std::format("\n\t\tCaptured: {}", e.reason()));
 				}
 				return result;
 			}
@@ -184,14 +185,14 @@ export namespace Testing {
 		class AssertNorException : public AssertException {
 		typedef AssertException inherited;
 		private:
-			std::vector<TestException> m_caused;
+			std::vector<BaseException> m_caused;
 
 		public:
-			AssertNorException(const std::vector<TestException>& caused) : m_caused(caused) {}
+			AssertNorException(const std::vector<BaseException>& caused) : m_caused(caused) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertNorException: not all expected exceptions were captured.");
-				for (const TestException& e : m_caused) {
+				for (const BaseException& e : m_caused) {
 					result.append(std::format("\n\t\tCaptured: {}", e.reason()));
 				}
 				return result;
@@ -202,15 +203,15 @@ export namespace Testing {
 		class AssertAndException : public AssertException {
 		typedef AssertException inherited;
 		private:
-			std::vector<TestException> m_caused;
+			std::vector<BaseException> m_caused;
 
 		public:
-			AssertAndException(const std::vector<TestException>& caused) : m_caused(caused) {}
+			AssertAndException(const std::vector<BaseException>& caused) : m_caused(caused) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertAndException: at least one execution failed");
-				for (const TestException& e : m_caused) {
-					result.append(std::format("\n\t\tCaused by: {}", e.reason()));
+				for (const BaseException& e : m_caused) {
+					result.append(std::format("\n\t\tCaptured: {}", e.reason()));
 				}
 				return result;
 			}
@@ -220,14 +221,14 @@ export namespace Testing {
 		class AssertNandException : public AssertException {
 		typedef AssertException inherited;
 		private:
-			std::vector<TestException> m_caused;
+			std::vector<BaseException> m_caused;
 
 		public:
-			AssertNandException(const std::vector<TestException>& caused) : m_caused(caused) {}
+			AssertNandException(const std::vector<BaseException>& caused) : m_caused(caused) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertNandException: not all exceptions were captured");
-				for (const TestException& e : m_caused) {
+				for (const BaseException& e : m_caused) {
 					result.append(std::format("\n\t\tCaptured: {}", e.reason()));
 				}
 				return result;
@@ -404,18 +405,24 @@ export namespace Testing {
 
 	public:
 		/*
-		* Newer throw TestException, throws std::exception or IgnoredException
+		* Newer throw BaseException, throws std::nested_exception or IgnoredException
 		*/
-		template<typename _It, typename _Func>
+		template<typename _It, typename _Func, bool t_CaptureAllExceptions = false>
 		static void forEach(_It from, _It to, _Func applyable) noexcept(false) {
-			std::vector<TestException> capturedExceptions;
+			std::vector<BaseException> capturedExceptions;
 			for (; from != to; from++) {
 				try {
 					applyable(*from);
 				} catch (const AssertException& e) {
-					capturedExceptions.push_back(TestException(e.reason()));
-				} catch (const TestException& e) {
+					capturedExceptions.emplace_back(e.reason());
+				} catch (const BaseException& e) {
 					capturedExceptions.push_back(e);
+				} catch (const std::exception& e) {
+					if (t_CaptureAllExceptions) {
+						capturedExceptions.emplace_back(UnexpectedException(e).reason());
+					} else {
+						throw std::nested_exception();
+					}
 				}
 			}
 			if (!capturedExceptions.empty()) {
@@ -427,7 +434,7 @@ export namespace Testing {
 	public:
 		template<bool t_PrintAllExceptions, typename AssertFunctionType, typename ...AssertFunctionTypes>
 		static void Or(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
-			std::vector<TestException> capturedExceptions;
+			std::vector<BaseException> capturedExceptions;
 			try {
 				_Or(capturedExceptions, std::forward<AssertFunctionType>(function), std::forward<AssertFunctionTypes>(functions)...);
 			} catch (const std::exception& e) {
@@ -449,13 +456,15 @@ export namespace Testing {
 
 	private:
 		template<typename AssertFunctionType, typename... AssertFunctionTypes>
-		static void _Or(std::vector<TestException>& capturedExceptions, AssertFunctionType&& function, AssertFunctionTypes&&... functions) {
+		static void _Or(std::vector<BaseException>& capturedExceptions, AssertFunctionType&& function, AssertFunctionTypes&&... functions) {
 			try {
 				function();
 			} catch (const AssertException& e) {
-				capturedExceptions.push_back(TestException(e.reason()));
-			} catch (const TestException& e) {
+				capturedExceptions.emplace_back(e.reason());
+			} catch (const BaseException& e) {
 				capturedExceptions.push_back(e);
+			} catch (const std::exception&) {
+				throw std::nested_exception();
 			}
 			if constexpr (sizeof...(functions)) {
 				_Or(capturedExceptions, std::forward<AssertFunctionTypes>(functions)...);
@@ -466,7 +475,7 @@ export namespace Testing {
 	public:
 		template<bool t_PrintAllExceptions, typename AssertFunctionType, typename ...AssertFunctionTypes>
 		static void Nor(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
-			std::vector<TestException> capturedExceptions;
+			std::vector<BaseException> capturedExceptions;
 			try {
 				_Nor(capturedExceptions, std::forward<AssertFunctionType>(function), std::forward<AssertFunctionTypes>(functions)...);
 			} catch (const std::exception& e) {
@@ -488,13 +497,15 @@ export namespace Testing {
 
 	private:
 		template<typename AssertFunctionType, typename... AssertFunctionTypes>
-		static void _Nor(std::vector<TestException>& capturedExceptions, AssertFunctionType&& function, AssertFunctionTypes&&... functions) {
+		static void _Nor(std::vector<BaseException>& capturedExceptions, AssertFunctionType&& function, AssertFunctionTypes&&... functions) {
 			try {
 				function();
 			} catch (const AssertException& e) {
-				capturedExceptions.push_back(TestException(e.reason()));
-			} catch (const TestException& e) {
+				capturedExceptions.emplace_back(e.reason());
+			} catch (const BaseException& e) {
 				capturedExceptions.push_back(e);
+			} catch (const std::exception&) {
+				throw std::nested_exception();
 			}
 			if constexpr (sizeof...(functions)) {
 				_Nor(capturedExceptions, std::forward<AssertFunctionTypes>(functions)...);
@@ -505,7 +516,7 @@ export namespace Testing {
 	public:
 		template<bool t_PrintAllExceptions, typename AssertFunctionType, typename ...AssertFunctionTypes>
 		static void And(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
-			std::vector<TestException> capturedExceptions;
+			std::vector<BaseException> capturedExceptions;
 			try {
 				_And(capturedExceptions, std::forward<AssertFunctionType>(function), std::forward<AssertFunctionTypes>(functions)...);
 			} catch (const std::exception& e) {
@@ -523,13 +534,15 @@ export namespace Testing {
 
 	private:
 		template<typename AssertFunctionType, typename... AssertFunctionTypes>
-		static void _And(std::vector<TestException>& capturedExceptions, AssertFunctionType&& function, AssertFunctionTypes&&... functions) {
+		static void _And(std::vector<BaseException>& capturedExceptions, AssertFunctionType&& function, AssertFunctionTypes&&... functions) {
 			try {
 				function();
 			} catch (const AssertException& e) {
-				capturedExceptions.push_back(TestException(e.reason()));
-			} catch (const TestException& e) {
+				capturedExceptions.emplace_back(e.reason());
+			} catch (const BaseException& e) {
 				capturedExceptions.push_back(e);
+			} catch (const std::exception&) {
+				throw std::nested_exception();
 			}
 			if constexpr (sizeof...(functions)) {
 				_And(capturedExceptions, std::forward<AssertFunctionTypes>(functions)...);
@@ -540,7 +553,7 @@ export namespace Testing {
 	public:
 		template<bool t_PrintAllExceptions, typename AssertFunctionType, typename ...AssertFunctionTypes>
 		static void Nand(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
-			std::vector<TestException> capturedExceptions;
+			std::vector<BaseException> capturedExceptions;
 			try {
 				_Nand(capturedExceptions, std::forward<AssertFunctionType>(function), std::forward<AssertFunctionTypes>(functions)...);
 			} catch (const std::exception& e) {
@@ -562,13 +575,15 @@ export namespace Testing {
 
 	private:
 		template<typename AssertFunctionType, typename... AssertFunctionTypes>
-		static void _Nand(std::vector<TestException>& capturedExceptions, AssertFunctionType&& function, AssertFunctionTypes&&... functions) {
+		static void _Nand(std::vector<BaseException>& capturedExceptions, AssertFunctionType&& function, AssertFunctionTypes&&... functions) {
 			try {
 				function();
 			} catch (const AssertException& e) {
-				capturedExceptions.push_back(TestException(e.reason()));
-			} catch (const TestException& e) {
+				capturedExceptions.emplace_back(e.reason());
+			} catch (const BaseException& e) {
 				capturedExceptions.push_back(e);
+			} catch (const std::exception&) {
+				throw std::nested_exception();
 			}
 			if constexpr (sizeof...(functions)) {
 				_Nand(capturedExceptions, std::forward<AssertFunctionTypes>(functions)...);
