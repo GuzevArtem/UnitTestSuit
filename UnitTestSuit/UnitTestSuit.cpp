@@ -60,16 +60,26 @@ namespace Testing {
 			);
 		}),
 
-		new UnitTestTyped<Type>("BenchmarkedTest", [](TestContextTyped<Type>& ctx) -> void {
+		new UnitTestTyped<Type>("TypedTestWithBenchmarkIn", [](TestContextTyped<Type>& ctx) -> void {
 			Type object = ctx.createTestObject();
-			auto foo = [](Type& obj) {
+			auto foo = [](Type& obj) mutable {
 				std::this_thread::sleep_for(std::chrono::nanoseconds(10*(++obj)));
+				Benchmark::doNotOptimizeAway(obj);
 			};
 			auto result = Benchmark::function(100, foo, object);
 			std::cout << std::format("\n100 iterations:   [{}]", result);
 
 			result = Benchmark::function(foo, object);
 			std::cout << std::format("\nsingle iteration: [{}]", result);
+		}),
+
+		new BenchmarkUnitTestTyped<Type>("BenchmarkedTypedTest", [](TestContextTyped<Type>& ctx) -> void {
+			uint64_t object = ctx.createTestObject();
+
+			Assert::isZero(object);
+			Assert::same<uint64_t>(object);
+			Assert::notEquals(object, 1);
+			Assert::equals(object, 0);
 		}),
 	}) {}
 };

@@ -9,6 +9,7 @@ export module UnitTest;
 
 import TestContext;
 import TestException;
+import Benchmark;
 import Assert;
 
 export namespace Testing {
@@ -83,6 +84,28 @@ export namespace Testing {
 	class UnitTestTyped : public UnitTestBase<TestContextTyped<Type>> {
 	public:
 		UnitTestTyped(char const* name, std::function<void(TestContextTyped<Type>&)> func) : UnitTestBase<TestContextTyped<Type>>(name, func) {}
+	};
+
+	template<TestContextType ContextType>
+	struct runBenchmarked {
+		std::function<void(ContextType&)> func;
+
+		inline void operator()(ContextType& context) const {
+			Benchmark::Result result = Benchmark::function(func, context);
+			std::cout << std::format("\tTest run time = [{:#t}]\t", result);
+		}
+	};
+
+	export class BenchmarkUnitTest : public UnitTest {
+	public:
+		BenchmarkUnitTest(char const* name, std::function<void(TestContext&)> func) : UnitTest(name, runBenchmarked<TestContext>(func)) {}
+	};
+
+	export
+		template<typename Type>
+	class BenchmarkUnitTestTyped : public UnitTestTyped<Type> {
+	public:
+		BenchmarkUnitTestTyped(char const* name, std::function<void(TestContextTyped<Type>&)> func) : UnitTestTyped<Type>(name, runBenchmarked<TestContextTyped<Type>>(func)) {}
 	};
 }
 

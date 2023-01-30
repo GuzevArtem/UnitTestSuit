@@ -4,7 +4,6 @@ module;
 #include <vector>
 #include <exception>
 #include <string>
-#include <unordered_map>
 #include <stacktrace>
 
 export module TestException;
