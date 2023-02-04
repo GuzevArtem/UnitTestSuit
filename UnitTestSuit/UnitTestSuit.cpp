@@ -4,13 +4,17 @@
 
 import Testing;
 
+namespace {
+	Testing::TestSuit suit;
+}
+
 namespace Testing {
 
 	constexpr bool PRINT_IGNORED_EXCEPTIONS = true;
 
 	template<typename Type>
-	class MyTestClass : public TestClassTyped<MyTestClass<Type>, Type> {
-		typedef TestClassTyped<MyTestClass<Type>, Type> inherited;
+	class MyTestClass : public TestClassTyped<MyTestClass<Type>, Type/*, suit*/> {
+		typedef TestClassTyped<MyTestClass<Type>, Type/*, suit*/> inherited;
 	public:
 
 		MyTestClass() : inherited("MyTestClass", { 
@@ -87,7 +91,6 @@ namespace Testing {
 }
 
 int main() {
-	Testing::TestSuit::registerClass<Testing::MyTestClass<uint64_t>>();
-
-	Testing::TestSuit::instance()->run();
+	suit.registerClass<Testing::MyTestClass<uint64_t>>();
+	suit.run();
 }

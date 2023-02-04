@@ -11,6 +11,8 @@ namespace Testing {
 	class LIBUNITTESTSUIT_API TestSuit;
 
 	//Test Classes
+	class LIBUNITTESTSUIT_API TestClassInterface;
+
 	class LIBUNITTESTSUIT_API TestClass;
 
 	template<typename Type>
@@ -92,4 +94,3 @@ export import TestContext;
 export import TestException;
 export import UnitTest;
 export import Benchmark;
-

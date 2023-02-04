@@ -32,16 +32,16 @@ export namespace Testing {
 
 	public:
 		template<typename T>
-		T createTestObject() { return {}; }
+		constexpr T createTestObject() { return {}; }
 
 		template<typename T, class... Args >
-		T* createTestObjectPointed(Args&&... args) {
+		constexpr T* createTestObjectPointed(Args&&... args) {
 			T* obj = &m_controlledObjects.emplace_back(std::make_any<T>(std::forward<Args>(args)...));
 			return obj;
 		}
 
 		template<typename T, size_t Count>
-		std::array<T, Count> createTestObjectsArray() { return {}; }
+		constexpr std::array<T, Count> createTestObjectsArray() { return {}; }
 
 	public:
 
@@ -82,13 +82,13 @@ export namespace Testing {
 		template<typename Type>
 	class TestContextTyped : public TestContext {
 	public:
-		Type createTestObject() { return {}; }
+		constexpr Type createTestObject() { return {}; }
 
 		template<size_t Count>
-		std::array<Type, Count> createTestObjectsArray() { return {}; }
+		constexpr std::array<Type, Count> createTestObjectsArray() { return {}; }
 
 		template<class... Args >
-		Type* createTestObjectPointed(Args&&... args) {
+		constexpr Type* createTestObjectPointed(Args&&... args) {
 			Type* obj = &m_controlledObjects.emplace_back(std::make_any<Type>(std::forward<Args>(args)...));
 			return obj;
 		}

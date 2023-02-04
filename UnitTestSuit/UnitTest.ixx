@@ -16,22 +16,27 @@ export namespace Testing {
 	template<typename T>
 	concept TestContextType = std::is_base_of_v<TestContext, T> || std::same_as<T, TestContext>;
 
-	export
-		class UnitTestInterface {
-		public:
-			virtual void run() = 0;
-
-			virtual TestState getState() const = 0;
+	template<typename T, typename Return, typename ...Args>
+	concept FunctorType = requires (T f, Args... args) {
+		{ f(args...) } -> std::convertible_to<Return>;
 	};
 
-	template<TestContextType ContextType>
-	class UnitTestBase : public UnitTestInterface {
+	export
+	class UnitTestInterface {
+	public:
+		virtual void run() = 0;
+
+		virtual TestState getState() const = 0;
+	};
+
+	template<TestContextType ContextType, FunctorType<void, ContextType&> functor>
+		class UnitTestBase : public UnitTestInterface {
 	private:
 		char const* m_name;
-		std::function<void(ContextType&)> m_testFunction;
+		functor m_testFunction;
 		ContextType* context;
 	public:
-		UnitTestBase(char const* name, std::function<void(ContextType&)>& func) : context(new ContextType()), m_name(name), m_testFunction(func) {}
+		constexpr UnitTestBase(char const* name, functor func) : context(new ContextType()), m_name(name), m_testFunction(func) {}
 		virtual ~UnitTestBase() {
 			delete context;
 		}
@@ -74,39 +79,41 @@ export namespace Testing {
 		virtual TestState getState() const override { return static_cast<TestContext*>(context)->state(); }
 	};
 
-	export class UnitTest : public UnitTestBase<TestContext> {
+	export
+		template<FunctorType<void, TestContext&> functor = std::function<void(TestContext&)>>
+	class UnitTest : public UnitTestBase<TestContext, functor> {
 	public:
-		UnitTest(char const* name, std::function<void(TestContext&)> func) : UnitTestBase<TestContext>(name, func) {}
+		constexpr UnitTest(char const* name, functor func) : UnitTestBase<TestContext, functor>(name, func) {}
 	};
 
 	export
-		template<typename Type>
-	class UnitTestTyped : public UnitTestBase<TestContextTyped<Type>> {
+		template<typename Type, FunctorType<void, TestContextTyped<Type>&> functor = std::function<void(TestContextTyped<Type>&)>>
+	class UnitTestTyped : public UnitTestBase<TestContextTyped<Type>, functor> {
 	public:
-		UnitTestTyped(char const* name, std::function<void(TestContextTyped<Type>&)> func) : UnitTestBase<TestContextTyped<Type>>(name, func) {}
+		constexpr UnitTestTyped(char const* name, functor func) : UnitTestBase<TestContextTyped<Type>, functor>(name, func) {}
 	};
 
-	template<TestContextType ContextType>
+	template<TestContextType ContextType, FunctorType<void, ContextType&> functor = std::function<void(ContextType&)>>
 	struct runBenchmarked {
-		std::function<void(ContextType&)> func;
+		functor func;
 
-		inline void operator()(ContextType& context) const {
+		inline constexpr void operator()(ContextType& context) const {
 			Benchmark::Result result = Benchmark::function(func, context);
 			std::cout << std::format("\tTest run time = [{:#t}]\t", result);
 		}
 	};
 
-	export class BenchmarkUnitTest : public UnitTest {
+	export
+		template<FunctorType<void, TestContext&> functor = std::function<void(TestContext&)>>
+	class BenchmarkUnitTest : public UnitTest<functor> {
 	public:
-		BenchmarkUnitTest(char const* name, std::function<void(TestContext&)> func) : UnitTest(name, runBenchmarked<TestContext>(func)) {}
+		constexpr BenchmarkUnitTest(char const* name, functor func) : UnitTest(name, runBenchmarked<TestContext, functor>(func)) {}
 	};
 
 	export
-		template<typename Type>
-	class BenchmarkUnitTestTyped : public UnitTestTyped<Type> {
+		template<typename Type, FunctorType<void, TestContextTyped<Type>&> functor = std::function<void(TestContextTyped<Type>&)>>
+	class BenchmarkUnitTestTyped : public UnitTestTyped<Type, functor> {
 	public:
-		BenchmarkUnitTestTyped(char const* name, std::function<void(TestContextTyped<Type>&)> func) : UnitTestTyped<Type>(name, runBenchmarked<TestContextTyped<Type>>(func)) {}
+		constexpr BenchmarkUnitTestTyped(char const* name, functor func) : UnitTestTyped<Type>(name, runBenchmarked<TestContextTyped<Type>, functor>(func)) {}
 	};
 }
-
-static_assert(sizeof(Testing::UnitTest) == sizeof(Testing::UnitTestTyped<uint32_t>));

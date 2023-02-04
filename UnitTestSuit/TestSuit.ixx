@@ -2,40 +2,36 @@ module;
 
 #include <iostream>
 #include <format>
-#include <vector>
 #include <concepts>
+#include <vector>
 
 export module TestSuit;
 
 import TestClass;
 
 export namespace Testing {
-	template<typename T>
-	concept TestClassType = std::same_as<T, TestClassBase> || std::is_base_of_v<TestClassBase, T>;
 
-	export class TestSuit {
+	template<typename T>
+	concept TestClassType = std::same_as<T, TestClassInterface> || std::is_base_of_v<TestClassInterface, T>;
+
+	export
+	class TestSuit {
 	
 	public:
-		virtual ~TestSuit() {
-			for (auto testClass : m_testClasses) {
+		constexpr TestSuit() : m_registeredTests(0), m_testClasses() {}
+		constexpr virtual ~TestSuit() {
+			for (TestClassInterface* testClass : m_testClasses) {
 				delete testClass;
 			}
 		}
 
 	private:
-		std::vector<TestClassBase*> m_testClasses;
-	
-	public:
-
-		[[nodiscard]] static TestSuit* instance() {
-			static TestSuit* ts = new TestSuit();
-			return ts;
-		}
+		size_t m_registeredTests;
+		std::vector<TestClassInterface*> m_testClasses;
 
 	public:
 		void run() {
-
-			for (TestClassBase* cls : m_testClasses) {
+			for (TestClassInterface* cls : m_testClasses) {
 				try {
 					std::cout << std::format("Starting test class: [{}]\n", cls->name());
 					cls->setUp();
@@ -54,20 +50,15 @@ export namespace Testing {
 		/*
 		* Return false if exception is fatal and class execution should be terminated.
 		*/
-		bool processTestException(const std::exception& e) {
+		constexpr bool processTestException(const std::exception& e) const {
 			return false;
 		}
 
 		template<TestClassType T, typename... Args>
-		static void registerClass(Args&&... args) {
-			TestSuit::instance()->_registerClass<T>(std::forward<Args>(args)...);
-		}
-
-	protected:
-		template<TestClassType T, typename... Args>
-		void _registerClass(Args&&... args) {
+		void registerClass(Args&&... args) {
 			T* cls = new T(std::forward<Args>(args)...);
-			m_testClasses.push_back(cls);
+			m_testClasses.emplace_back(static_cast<TestClassInterface*>(cls->self()));
+			m_registeredTests++;
 		}
 	};
 }
