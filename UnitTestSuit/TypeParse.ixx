@@ -4,7 +4,7 @@ module;
 
 export module TypeParse;
 
-export 
+export
 template <typename T> struct TypeParse {
 	static const char* name;
 };

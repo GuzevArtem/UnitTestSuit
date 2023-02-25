@@ -24,6 +24,11 @@ namespace Testing {
 	template<typename Type>
 	class LIBUNITTESTSUIT_API UnitTestTyped;
 
+	class LIBUNITTESTSUIT_API UnitTestFunction;
+
+	template<typename Type>
+	class LIBUNITTESTSUIT_API UnitTestTypedFunction;
+
 	//Benchmarked Tests
 	class LIBUNITTESTSUIT_API BenchmarkUnitTest;
 

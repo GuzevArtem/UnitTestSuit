@@ -16,7 +16,7 @@ export namespace Testing {
 
 	export
 	class TestSuit {
-	
+
 	public:
 		constexpr TestSuit() : m_registeredTests(0), m_testClasses() {}
 		constexpr virtual ~TestSuit() {
@@ -57,8 +57,17 @@ export namespace Testing {
 		template<TestClassType T, typename... Args>
 		void registerClass(Args&&... args) {
 			T* cls = new T(std::forward<Args>(args)...);
+			cls->registerTestMethods();
 			m_testClasses.emplace_back(static_cast<TestClassInterface*>(cls->self()));
 			m_registeredTests++;
+		}
+
+		template<template <typename T> typename TemplatedTestClass, typename ClassType, typename... ClassTypes>
+		void registerMultipleClasses() {
+			registerClass<TemplatedTestClass<ClassType>>();
+			if constexpr (sizeof...(ClassTypes)) {
+				registerMultipleClasses<TemplatedTestClass, ClassTypes...>();
+			}
 		}
 	};
 }

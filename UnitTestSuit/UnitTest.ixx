@@ -16,6 +16,68 @@ export namespace Testing {
 	template<typename T>
 	concept TestContextType = std::is_base_of_v<TestContext, T> || std::same_as<T, TestContext>;
 
+	export
+		template<typename ThisT, typename Return, typename ...Args>
+	class FunctionWrapper {
+	private:
+		typedef FunctionWrapper<ThisT, Return, Args...> Self;
+
+		ThisT* m_this;
+		Return(ThisT::* m_closure)(Args...);
+
+	public:
+		inline FunctionWrapper(ThisT* caller, Return(ThisT::* func)(Args...)) {
+			m_this = caller;
+			m_closure = func;
+		}
+
+		inline FunctionWrapper(const Self&) = default;
+		inline FunctionWrapper(Self&&) = default;
+
+		Self& operator= (const Self&) = default;
+		Self& operator= (Self&&) = default;
+
+	public:
+		Return operator() (Args... args) {
+			if constexpr (std::same_as<Return, void>) {
+				(m_this->*m_closure)(std::forward<Args>(args)...);
+			} else {
+				return (m_this->*m_closure)(std::forward<Args>(args)...);
+			}
+		}
+	};
+
+	export
+		template<typename T, template <typename> typename ThisT, typename Return, typename ...Args>
+	class FunctionTypedWrapper {
+	private:
+		typedef FunctionTypedWrapper<T, ThisT, Return, Args...> Self;
+
+		ThisT<T>* m_this;
+		Return(ThisT<T>::*m_closure)(Args...);
+
+	public:
+		inline FunctionTypedWrapper(ThisT<T>* caller, Return(ThisT<T>::* func)(Args...)) {
+			m_this = caller;
+			m_closure = func;
+		}
+
+		inline FunctionTypedWrapper(const Self&) = default;
+		inline FunctionTypedWrapper(Self&&) = default;
+
+		Self& operator= (const Self&) = default;
+		Self& operator= (Self&&) = default;
+
+	public:
+		Return operator() (Args... args) {
+			if constexpr (std::same_as<Return, void>) {
+				(m_this->*m_closure)(std::forward<Args>(args)...);
+			} else {
+				return (m_this->*m_closure)(std::forward<Args>(args)...);
+			}
+		}
+	};
+
 	template<typename T, typename Return, typename ...Args>
 	concept FunctorType = requires (T f, Args... args) {
 		{ f(args...) } -> std::convertible_to<Return>;
@@ -93,9 +155,42 @@ export namespace Testing {
 		constexpr UnitTestTyped(char const* name, functor func) : UnitTestBase<TestContextTyped<Type>, functor>(name, func) {}
 	};
 
+	export
+	class UnitTestFunction {
+	public:
+		template<typename ThisT>
+		static void instance(std::vector<UnitTestInterface*>& result, char const* name, const ThisT* caller, void(ThisT::* func)(TestContext&)) {
+			FunctionWrapper<ThisT, void, TestContext&> function(const_cast<ThisT*>(caller), func);
+			result.emplace_back(new UnitTest(name, function));
+		}
+
+		template<typename Function>
+		static void instance(std::vector<UnitTestInterface*>& result, char const* name, Function func) {
+			result.emplace_back(new UnitTest(name, func));
+		}
+	};
+
+	export
+		template<typename Type>
+	class UnitTestTypedFunction {
+	public:
+		template<template<typename> typename ThisT>
+		static void instance(std::vector<UnitTestInterface*>& result, char const* name, const ThisT<Type>* caller, void(ThisT<Type>::* func)(TestContextTyped<Type>&)) {
+			FunctionTypedWrapper<Type, ThisT, void, TestContextTyped<Type>&> function(const_cast<ThisT<Type>*>(caller), func);
+			result.emplace_back(new UnitTestTyped<Type>(name, function));
+		}
+
+		template<typename Function>
+		static void instance(std::vector<UnitTestInterface*>& result, char const* name, Function func) {
+			result.emplace_back(new UnitTestTyped<Type>(name, func));
+		}
+	};
+
 	template<TestContextType ContextType, FunctorType<void, ContextType&> functor = std::function<void(ContextType&)>>
 	struct runBenchmarked {
 		functor func;
+
+		inline runBenchmarked(functor _func) : func(_func) {}
 
 		inline constexpr void operator()(ContextType& context) const {
 			Benchmark::Result result = Benchmark::function(func, context);
