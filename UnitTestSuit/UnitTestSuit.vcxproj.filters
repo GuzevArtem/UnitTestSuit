@@ -48,5 +48,14 @@
     <ClCompile Include="Benchmark.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Utils.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Interfaces.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TestView.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

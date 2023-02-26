@@ -35,9 +35,14 @@ namespace Testing {
 			});
 		}
 
+		static void SampleTestStatic(TestContext& ctx) {
+			Assert::Fail();
+		}
+
 		constexpr virtual void registerTestMethods() override {
 			this->addTest("SampleTest", &MyTestClass<Type>::SampleTest);
 			this->addTest("SampleTestTyped", &MyTestClass<Type>::SampleTestTyped);
+			this->addTest("SampleStaticTest", &MyTestClass<Type>::SampleTestStatic);
 
 			this->addTest("Creation", [](TestContext& ctx) -> void {
 				uint64_t object = ctx.createTestObject<uint64_t>();

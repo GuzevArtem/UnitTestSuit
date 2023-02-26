@@ -72,9 +72,9 @@ export namespace Testing {
 		IgnoredException(const std::vector<BaseException>& caused) : m_caused(caused) {}
 
 		[[nodiscard]] virtual std::string reason() const {
-			std::string result = std::format("\n\tIgnoredException{}", m_caused.empty() ? ": Execution skipped!" : ":");
+			std::string result = std::format("\nIgnoredException{}", m_caused.empty() ? ": Execution skipped!" : ":");
 			for (BaseException e : m_caused) {
-				result.append(std::format("\n\t\tCaused by: {}", e.reason()));
+				result.append(std::format("\nCaused by: {}", e.reason()));
 			}
 			return result;
 		}

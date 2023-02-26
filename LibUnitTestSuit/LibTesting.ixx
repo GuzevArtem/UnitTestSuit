@@ -7,6 +7,11 @@ export module LibTesting;
 
 namespace Testing {
 
+	//Test View
+	class LIBUNITTESTSUIT_API TestViewInterface;
+
+	class LIBUNITTESTSUIT_API TestViewConsole;
+
 	//Suit
 	class LIBUNITTESTSUIT_API TestSuit;
 
@@ -19,15 +24,12 @@ namespace Testing {
 	class LIBUNITTESTSUIT_API TestClassTyped;
 
 	//Tests
+	class LIBUNITTESTSUIT_API UnitTestInterface;
+
 	class LIBUNITTESTSUIT_API UnitTest;
 
 	template<typename Type>
 	class LIBUNITTESTSUIT_API UnitTestTyped;
-
-	class LIBUNITTESTSUIT_API UnitTestFunction;
-
-	template<typename Type>
-	class LIBUNITTESTSUIT_API UnitTestTypedFunction;
 
 	//Benchmarked Tests
 	class LIBUNITTESTSUIT_API BenchmarkUnitTest;
@@ -91,6 +93,8 @@ namespace Testing {
 	class LIBUNITTESTSUIT_API ExpectedFailedException;
 }
 
+export import Interfaces;
+export import TestView;
 export import TestSuit;
 export import Assert;
 export import Expected;
@@ -99,3 +103,4 @@ export import TestContext;
 export import TestException;
 export import UnitTest;
 export import Benchmark;
+export import Utils;

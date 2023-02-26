@@ -1,44 +1,29 @@
 module;
 
 #include <format>
-#include <iostream>
 #include <string>
 #include <array>
 #include <vector>
 #include <map>
+#include <exception>
 
 export module TestClass;
 
+import Interfaces;
+import TestView;
 import UnitTest;
 import TestContext;
+import TestException;
 import TypeParse;
-
-namespace {
-	int constexpr length(const char* str) {
-		return *str ? 1 + length(str + 1) : 0;
-	}
-}
+import Utils;
 
 export namespace Testing {
 
-	export
-	class TestClassInterface {
-	public:
-		constexpr virtual char const* name() const = 0;
+	template<typename T>
+	struct is_static_function_pointer : std::bool_constant<false> {};
 
-		virtual std::vector<UnitTestInterface*>& getAllTests() = 0;
-
-		constexpr virtual void setUp() {};
-		constexpr virtual void tearDown() {};
-
-		virtual void run() = 0;
-		virtual void registerTestMethods() = 0;
-
-		virtual void printData() const = 0;
-
-		constexpr TestClassInterface* self() { return this; };
-		constexpr const TestClassInterface* self() const { return this; };
-	};
+	template<typename Return, typename ...Args>
+	struct is_static_function_pointer<Return(*)(Args...)> : std::bool_constant<true> {};
 
 	struct TestData {
 		size_t totalTestsCount = 0;
@@ -61,6 +46,8 @@ export namespace Testing {
 	template<typename Self>
 	class TestClassInner : public TestClassInterface {
 	private:
+		TestViewInterface* m_view = TestViewConsole::instance();
+
 		char const* m_name;
 		TestData m_data;
 		std::vector<UnitTestInterface*> m_unitTests;
@@ -73,52 +60,136 @@ export namespace Testing {
 			}
 		}
 
+		virtual void setView(TestViewInterface* view) {
+			if (m_view) {
+				m_view->print();
+				if (!m_view->parent()) {
+					delete m_view;
+				}
+			}
+			if (view) {
+				m_view = view;
+			}
+		}
+		virtual TestViewInterface* view() const { return m_view; }
+
+	private:
+		virtual void onTestStart(const UnitTestInterface* test, TestContext* ctx) override {
+			m_view->addEntry(TestViewInterface::info, std::format("Starting test: [{}]", test->name()));
+		}
+		virtual void onTestComplete(const UnitTestInterface* test, TestContext* ctx) override {
+			m_view->append(TestViewInterface::info, "\t");
+			m_view->append(TestViewInterface::info, std::format("COMPLETED"));
+		}
+		virtual void onTestComplete(const UnitTestInterface* test, TestContext* ctx, const IgnoredException& e) override {
+			m_view->append(TestViewInterface::info, "\t");
+			m_view->append(TestViewInterface::info, std::format("COMPLETED:"));
+			m_view->append(TestViewInterface::info, "\t");
+			m_view->append(TestViewInterface::info, std::format("IGNORING: "));
+			m_view->indent();
+			m_view->append(TestViewInterface::warning, std::format("{}", e.reason()), true);
+			m_view->unindent();
+		}
+		virtual void onTestStop(const UnitTestInterface* test, TestContext* ctx, const TestStopException& e) override {
+			m_view->append(TestViewInterface::info, "\t");
+			m_view->append(TestViewInterface::warning, std::format("STOPPED: "));
+			m_view->indent();
+			m_view->append(TestViewInterface::warning, std::format("{}", e.reason()), true);
+			m_view->unindent();
+		}
+		virtual void onTestIgnore(const UnitTestInterface* test, TestContext* ctx, const IgnoredException& e) override {
+			m_view->append(TestViewInterface::info, "\t");
+			m_view->append(TestViewInterface::warning, std::format("IGNORED: "));
+			m_view->indent();
+			m_view->append(TestViewInterface::warning, std::format("{}", e.reason()), true);
+			m_view->unindent();
+		}
+		virtual void onTestFail(const UnitTestInterface* test, TestContext* ctx, const TestException& te) override {
+			m_view->append(TestViewInterface::info, "\t");
+			m_view->append(TestViewInterface::error, std::format("FAIL: "));
+			m_view->indent();
+			m_view->append(TestViewInterface::error, std::format("{}", te.reason()), true);
+			m_view->unindent();
+		}
+		virtual void onTestFail(const UnitTestInterface* test, TestContext* ctx, const std::exception& e) override {
+			m_view->append(TestViewInterface::info, "\t");
+			m_view->append(TestViewInterface::error, std::format("FAIL: "));
+			m_view->indent();
+			m_view->append(TestViewInterface::error, std::format("{}", e.what()), true);
+			m_view->unindent();
+		}
+
 	public:
 		constexpr virtual char const* name() const { return m_name; }
 
 		virtual std::vector<UnitTestInterface*>& getAllTests() override { return m_unitTests; }
 
+		virtual void processTestResult(UnitTestInterface* test) {
+			switch (test->getState()) {
+				case Stopped:
+					m_data.startedTestsCount++;
+					m_data.stoppedTestsCount++;
+					break;
+				case Ignored:
+					m_data.startedTestsCount++;
+					m_data.ignoredTestsCount++;
+					break;
+				case Crashed:
+					m_data.startedTestsCount++;
+					m_data.failedTestsCount++;
+					break;
+				case Failed:
+					m_data.startedTestsCount++;
+					m_data.failedTestsCount++;
+					break;
+				case Suceeded:
+					m_data.startedTestsCount++;
+					m_data.succeededTestsCount++;
+					break;
+				case Started:
+					m_data.startedTestsCount++;
+					break;
+				case NeverStarted:
+					break;
+				default:
+					break;
+			}
+		}
+
+		virtual void beforeTest() override {
+			m_view->indent();
+		}
+
+		virtual void afterTest() override {
+			m_view->unindent();
+			m_view->print();
+		}
+
+		virtual void beforeAllTests() override {
+			m_view->addEntry(TestViewInterface::info, std::format("Starting test class: [{}]", name()));
+		}
+
+		virtual void afterAllTests() override {
+			m_view->addEntry(TestViewInterface::info, std::format("-----------------------------------------------------------"));
+			m_view->addEntry(TestViewInterface::info, std::format("Class [{}] results:", name()));
+			m_view->indent();
+			m_view->addEntry(TestViewInterface::info, std::format("Completed tests: {}/{}", m_data.succeededTestsCount, m_data.totalTestsCount));
+			m_view->addEntry(TestViewInterface::info, std::format("Failed tests: {}/{}", m_data.failedTestsCount, m_data.totalTestsCount));
+			m_view->addEntry(TestViewInterface::info, std::format("Ignored tests: {}/{}", m_data.ignoredTestsCount, m_data.totalTestsCount));
+			m_view->unindent();
+			m_view->addEntry(TestViewInterface::info, std::format("==========================================================="));
+			m_view->print();
+		}
+
 		virtual void run() override {
 			m_data.reset();
 			m_data.totalTestsCount = m_unitTests.size();
 			for (UnitTestInterface* test : m_unitTests) {
+				beforeTest();
 				test->run();
-				switch (test->getState()) {
-					case Stopped:
-						m_data.startedTestsCount++;
-						m_data.stoppedTestsCount++;
-						break;
-					case Ignored:
-						m_data.startedTestsCount++;
-						m_data.ignoredTestsCount++;
-						break;
-					case Crashed:
-						m_data.startedTestsCount++;
-						m_data.failedTestsCount++;
-						break;
-					case Failed:
-						m_data.startedTestsCount++;
-						m_data.failedTestsCount++;
-						break;
-					case Suceeded:
-						m_data.startedTestsCount++;
-						m_data.succeededTestsCount++;
-						break;
-					case Started:
-						m_data.startedTestsCount++;
-						break;
-					case NeverStarted:
-						break;
-					default:
-						break;
-				}
-				//TODO: update view per test
+				processTestResult(test);
+				afterTest();
 			}
-			//TODO: update view per class
-		}
-
-		virtual void printData() const override {
-			std::cout << std::format("Class [{}] results:\n\tCompleted tests: {}/{}\n\tFailed tests: {}/{}\n\tIgnored tests: {}/{}\n", this->name(), m_data.succeededTestsCount, m_data.totalTestsCount, m_data.failedTestsCount, m_data.totalTestsCount, m_data.ignoredTestsCount, m_data.totalTestsCount);
 		}
 	};
 
@@ -131,11 +202,14 @@ export namespace Testing {
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
-			if constexpr (std::is_member_function_pointer_v<Function>) {
-				FunctionWrapper<Self, void, TestContext&> function(const_cast<Self*>(static_cast<const Self*>(this)), (void(__cdecl Self::*)(TestContext &))(func));
-				UnitTestFunction::instance(inherited::getAllTests(), name, function);
+			if constexpr (is_static_function_pointer<Function>::value) {
+				utils::FunctionStaticWrapper<void, TestContext&> function((void(*)(TestContext&))(func));
+				UnitTest<utils::FunctionStaticWrapper<void, TestContext&>>::instance(inherited::getAllTests(), name, this, function);
+			} else if constexpr (std::is_member_function_pointer_v<Function>) {
+				utils::FunctionWrapper<Self, void, TestContext&> function(static_cast<const Self*>(this), (void(Self::*)(TestContext &))(func));
+				UnitTest<utils::FunctionWrapper<Self, void, TestContext&>>::instance(inherited::getAllTests(), name, this, function);
 			} else {
-				UnitTestFunction::instance(inherited::getAllTests(), name, func);
+				UnitTest<Function>::instance(inherited::getAllTests(), name, this, func);
 			}
 		}
 	};
@@ -149,19 +223,22 @@ export namespace Testing {
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
-			if constexpr (std::is_member_function_pointer_v<Function>) {
-				FunctionTypedWrapper<Type, Self, void, TestContextTyped<Type>&> function(const_cast<Self<Type>*>(static_cast<const Self<Type>*>(this)), (void(__cdecl Self<Type>::*)(TestContextTyped<Type> &))(func));
-				UnitTestTypedFunction<Type>::instance(inherited::getAllTests(), name, function);
+			if constexpr (is_static_function_pointer<Function>::value) {
+				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
+				UnitTestTyped<Type, utils::FunctionStaticWrapper<void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function);
+			} else if constexpr (std::is_member_function_pointer_v<Function>) {
+				utils::FunctionWrapper<Self<Type>, void, TestContextTyped<Type>&> function(static_cast<const Self<Type>*>(this), (void(Self<Type>::*)(TestContextTyped<Type> &))(func));
+				UnitTestTyped<Type, utils::FunctionWrapper<Self<Type>, void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function);
 			} else {
-				UnitTestTypedFunction<Type>::instance(inherited::getAllTests(), name, func);
+				UnitTestTyped<Type, Function>::instance(inherited::getAllTests(), name, this, func);
 			}
 		}
 
-		constexpr virtual char const* name() const {
+		constexpr virtual char const* name() const override {
 			char const* name_ptr = inherited::name();
 			char const* type_name_ptr = TypeParse<Type>::name;
-			size_t name_length = ::length(name_ptr);
-			size_t type_name_length = ::length(type_name_ptr);
+			size_t name_length = utils::length(name_ptr);
+			size_t type_name_length = utils::length(type_name_ptr);
 			std::array<char, 256> result_holder;
 			for (size_t i = 0; i < name_length; ++i) {
 				result_holder[i] = name_ptr[i];

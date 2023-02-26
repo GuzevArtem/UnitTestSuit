@@ -1,12 +1,13 @@
 module;
 
-#include <iostream>
 #include <format>
 #include <concepts>
 #include <vector>
 
 export module TestSuit;
 
+import Interfaces;
+import TestView;
 import TestClass;
 
 export namespace Testing {
@@ -16,16 +17,19 @@ export namespace Testing {
 
 	export
 	class TestSuit {
-
 	public:
-		constexpr TestSuit() : m_registeredTests(0), m_testClasses() {}
+		constexpr TestSuit(TestViewInterface* view = TestViewConsole::instance()) : m_view(view), m_registeredTests(0), m_testClasses() {}
 		constexpr virtual ~TestSuit() {
 			for (TestClassInterface* testClass : m_testClasses) {
 				delete testClass;
 			}
+			if (!m_view->parent()) {
+				delete m_view;
+			}
 		}
 
 	private:
+		TestViewInterface* m_view;
 		size_t m_registeredTests;
 		std::vector<TestClassInterface*> m_testClasses;
 
@@ -33,17 +37,18 @@ export namespace Testing {
 		void run() {
 			for (TestClassInterface* cls : m_testClasses) {
 				try {
-					std::cout << std::format("Starting test class: [{}]\n", cls->name());
 					cls->setUp();
+					cls->beforeAllTests();
 					cls->run();
+					cls->afterAllTests();
 					cls->tearDown();
-					cls->printData();
 				} catch (const std::exception& e) {
 					if (!processTestException(e)) {
-						std::cerr << std::format("Test execution for class {} failed.\n {}", cls->name(), e.what());
+						m_view->addEntry(TestViewInterface::error, std::format("Test execution for class {} failed.\n {}", cls->name(), e.what()), true);
 						break;
 					}
 				}
+				m_view->print();
 			}
 		}
 
@@ -57,6 +62,11 @@ export namespace Testing {
 		template<TestClassType T, typename... Args>
 		void registerClass(Args&&... args) {
 			T* cls = new T(std::forward<Args>(args)...);
+			if (m_view) {
+				TestViewInterface* view = m_view->clone();
+				view->parent(view);
+				cls->setView(view);
+			}
 			cls->registerTestMethods();
 			m_testClasses.emplace_back(static_cast<TestClassInterface*>(cls->self()));
 			m_registeredTests++;

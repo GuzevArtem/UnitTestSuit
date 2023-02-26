@@ -172,7 +172,7 @@ struct std::formatter<Testing::Benchmark::Result> {
 	}
 };
 
-// TODO: VSO-1582358 WA until standart library modules will be used
+// TODO: VSO-1582358 WA until standard library modules will be used
 namespace std::chrono {
 	export
 	template <class _Ty>
