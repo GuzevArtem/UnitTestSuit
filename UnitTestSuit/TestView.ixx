@@ -41,6 +41,10 @@ export namespace Testing {
 	public:
 		virtual TestViewInterface* parent() const override { return m_parent; }
 		virtual void parent(TestViewInterface* parent) override {
+			if (this == parent) {
+				throw "TestViewInterface: Trying to set self as parent!";
+			}
+
 			if (m_parent) {
 				parent->removeSelf(this);
 			}
@@ -75,6 +79,16 @@ export namespace Testing {
 			return asBase;
 		}
 
+		virtual bool printErrors() const override {
+			bool result = false;
+			for (const TestViewInterface* child : m_childs) {
+				if (child->printErrors()) {
+					result = true;
+				}
+			}
+			return result;
+		}
+
 	protected:
 		virtual void indent() override { indent(1); }
 		virtual void indent(size_t count) override { m_indent += count; }
@@ -92,6 +106,7 @@ export namespace Testing {
 		struct Entry {
 			std::string data;
 			ViewLevel level;
+			size_t indent;
 		};
 
 	private:
@@ -100,10 +115,10 @@ export namespace Testing {
 		std::vector<Entry> m_entries;
 
 	public:
-		inline TestViewConsole() : TestViewBase(nullptr, "\t") {}
-		inline TestViewConsole(TestViewInterface* parent) : TestViewBase(parent, "\t") {}
-		inline TestViewConsole(std::string indentValue) : TestViewBase(nullptr, indentValue) {}
-		inline TestViewConsole(TestViewInterface* parent, std::string indentValue) : TestViewBase(parent, indentValue) {}
+		inline TestViewConsole() : TestViewBase(nullptr, "\t"), m_entryIndex(0) {}
+		inline TestViewConsole(TestViewInterface* parent) : TestViewBase(parent, "\t"), m_entryIndex(0) {}
+		inline TestViewConsole(std::string indentValue) : TestViewBase(nullptr, indentValue), m_entryIndex(0) {}
+		inline TestViewConsole(TestViewInterface* parent, std::string indentValue) : TestViewBase(parent, indentValue), m_entryIndex(0) {}
 
 	public:
 		void addMultilineEntry(const ViewLevel level, const std::string& multiline, const bool appendFirstLine = false) {
@@ -122,11 +137,11 @@ export namespace Testing {
 		}
 
 		void appendMultilineEntry(const ViewLevel level, const std::string& multiline) {
-			addMultilineEntry(level, multiline, true);
+			addMultilineEntry(level, multiline, m_entryIndex != m_entries.size());
 		}
 
 		virtual void append(const ViewLevel level, const std::string& appendix, const bool multiline) override {
-			if (m_entries.empty()) {
+			if (m_entryIndex == m_entries.size()) {
 				addEntry(level, appendix, multiline);
 			} else {
 				if (multiline) {
@@ -139,7 +154,7 @@ export namespace Testing {
 		}
 
 		virtual void append(const ViewLevel level, std::string&& appendix, const bool multiline) override {
-			if (m_entries.empty()) {
+			if (m_entryIndex == m_entries.size()) {
 				addEntry(level, appendix, multiline);
 			} else {
 				if (multiline) {
@@ -159,19 +174,25 @@ export namespace Testing {
 				e.level = level;
 				e.data = std::string(m_indentPrefix);
 				e.data = e.data.append(entry);
+				e.indent = indentValue();
 				m_entries.emplace_back(std::move(e));
 			}
 		}
 
 		virtual void addEntry(const ViewLevel level, std::string&& entry, const bool multiline) override {
-			Entry e;
-			e.level = level;
-			e.data = std::string(m_indentPrefix);
-			e.data = e.data.append(entry);
-			m_entries.emplace_back(std::move(e));
+			if (multiline) {
+				addMultilineEntry(level, entry);
+			} else {
+				Entry e;
+				e.level = level;
+				e.data = std::string(m_indentPrefix);
+				e.data = e.data.append(entry);
+				e.indent = indentValue();
+				m_entries.emplace_back(std::move(e));
+			}
 		}
 
-		std::ostream& outStream(ViewLevel level) {
+		std::ostream& outStream(ViewLevel level) const {
 			switch (level) {
 				case ViewLevel::invalid:
 				case ViewLevel::error:
@@ -190,6 +211,68 @@ export namespace Testing {
 				outStream(entry.level) << std::format("{}\n", entry.data);
 				++m_entryIndex;
 			}
+		}
+
+		virtual bool printErrors() const override {
+			bool result = inherited::printErrors();
+
+			if (m_entries.empty()) {
+				return result;
+			}
+
+			constexpr size_t linesOfCurrentIndentIfError = 2;
+
+			std::vector<Entry> buff;
+			bool skip_next_pop = false;
+			size_t prev_indent;
+			size_t error_count = linesOfCurrentIndentIfError;
+			{
+				Entry e = m_entries.front();
+				buff.emplace_back(e);
+				prev_indent = e.indent;
+			}
+
+			for (size_t i = 0; i < m_entries.size(); ++i) {
+				Entry e = m_entries[i];
+				bool already_added = false;
+				if (prev_indent < e.indent) {
+					buff.emplace_back(e);
+					prev_indent = e.indent;
+					already_added = true;
+				} else if (prev_indent == e.indent && e.level != ViewLevel::error) {
+					buff.pop_back();
+					buff.emplace_back(e);
+					error_count = linesOfCurrentIndentIfError;
+					skip_next_pop = false;
+					continue;
+				}
+
+				if (error_count > 0 && e.level == ViewLevel::error) {
+					--error_count;
+					result = true;
+					if (!already_added) {
+						buff.emplace_back(e);
+					}
+					skip_next_pop = true;
+				}
+
+				if (prev_indent > e.indent) {
+					if (!skip_next_pop) {
+						buff.pop_back();
+						skip_next_pop = false;
+					}
+					prev_indent = e.indent;
+				}
+			}
+
+			if (!result) {
+				return false; //buff is useless at this point
+			}
+
+			for (const Entry& entry : buff) {
+				outStream(ViewLevel::error) << std::format("{}\n", entry.data);
+			}
+			return result;
 		}
 
 		virtual void indent(size_t count) override { 

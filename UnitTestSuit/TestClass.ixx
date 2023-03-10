@@ -60,7 +60,7 @@ export namespace Testing {
 			}
 		}
 
-		virtual void setView(TestViewInterface* view) {
+		virtual void setView(TestViewInterface* view) override {
 			if (m_view) {
 				m_view->print();
 				if (!m_view->parent()) {
@@ -71,51 +71,51 @@ export namespace Testing {
 				m_view = view;
 			}
 		}
-		virtual TestViewInterface* view() const { return m_view; }
+		virtual TestViewInterface* view() const override { return m_view; }
 
 	private:
-		virtual void onTestStart(const UnitTestInterface* test, TestContext* ctx) override {
-			m_view->addEntry(TestViewInterface::info, std::format("Starting test: [{}]", test->name()));
+		virtual void onTestStart(const UnitTestInterface* test, TestContextInterface* ctx) override {
+			m_view->addEntry(ViewLevel::info, std::format("Starting test: [{}]", test->name()));
 		}
-		virtual void onTestComplete(const UnitTestInterface* test, TestContext* ctx) override {
-			m_view->append(TestViewInterface::info, "\t");
-			m_view->append(TestViewInterface::info, std::format("COMPLETED"));
+		virtual void onTestComplete(const UnitTestInterface* test, TestContextInterface* ctx) override {
+			m_view->append(ViewLevel::info, "\t");
+			m_view->append(ViewLevel::info, std::format("COMPLETED"));
 		}
-		virtual void onTestComplete(const UnitTestInterface* test, TestContext* ctx, const IgnoredException& e) override {
-			m_view->append(TestViewInterface::info, "\t");
-			m_view->append(TestViewInterface::info, std::format("COMPLETED:"));
-			m_view->append(TestViewInterface::info, "\t");
-			m_view->append(TestViewInterface::info, std::format("IGNORING: "));
+		virtual void onTestComplete(const UnitTestInterface* test, TestContextInterface* ctx, const IgnoredException& e) override {
+			m_view->append(ViewLevel::info, "\t");
+			m_view->append(ViewLevel::info, std::format("COMPLETED:"));
+			m_view->append(ViewLevel::info, "\t");
+			m_view->append(ViewLevel::info, std::format("IGNORING: "));
 			m_view->indent();
-			m_view->append(TestViewInterface::warning, std::format("{}", e.reason()), true);
+			m_view->append(ViewLevel::warning, std::format("{}", e.reason()), true);
 			m_view->unindent();
 		}
-		virtual void onTestStop(const UnitTestInterface* test, TestContext* ctx, const TestStopException& e) override {
-			m_view->append(TestViewInterface::info, "\t");
-			m_view->append(TestViewInterface::warning, std::format("STOPPED: "));
+		virtual void onTestStop(const UnitTestInterface* test, TestContextInterface* ctx, const TestStopException& e) override {
+			m_view->append(ViewLevel::info, "\t");
+			m_view->append(ViewLevel::warning, std::format("STOPPED: "));
 			m_view->indent();
-			m_view->append(TestViewInterface::warning, std::format("{}", e.reason()), true);
+			m_view->append(ViewLevel::warning, std::format("{}", e.reason()), true);
 			m_view->unindent();
 		}
-		virtual void onTestIgnore(const UnitTestInterface* test, TestContext* ctx, const IgnoredException& e) override {
-			m_view->append(TestViewInterface::info, "\t");
-			m_view->append(TestViewInterface::warning, std::format("IGNORED: "));
+		virtual void onTestIgnore(const UnitTestInterface* test, TestContextInterface* ctx, const IgnoredException& e) override {
+			m_view->append(ViewLevel::info, "\t");
+			m_view->append(ViewLevel::warning, std::format("IGNORED: "));
 			m_view->indent();
-			m_view->append(TestViewInterface::warning, std::format("{}", e.reason()), true);
+			m_view->append(ViewLevel::warning, std::format("{}", e.reason()), true);
 			m_view->unindent();
 		}
-		virtual void onTestFail(const UnitTestInterface* test, TestContext* ctx, const TestException& te) override {
-			m_view->append(TestViewInterface::info, "\t");
-			m_view->append(TestViewInterface::error, std::format("FAIL: "));
+		virtual void onTestFail(const UnitTestInterface* test, TestContextInterface* ctx, const TestException& te) override {
+			m_view->append(ViewLevel::info, "\t");
+			m_view->append(ViewLevel::error, std::format("FAIL: "));
 			m_view->indent();
-			m_view->append(TestViewInterface::error, std::format("{}", te.reason()), true);
+			m_view->append(ViewLevel::error, std::format("{}", te.reason()), true);
 			m_view->unindent();
 		}
-		virtual void onTestFail(const UnitTestInterface* test, TestContext* ctx, const std::exception& e) override {
-			m_view->append(TestViewInterface::info, "\t");
-			m_view->append(TestViewInterface::error, std::format("FAIL: "));
+		virtual void onTestFail(const UnitTestInterface* test, TestContextInterface* ctx, const std::exception& e) override {
+			m_view->append(ViewLevel::info, "\t");
+			m_view->append(ViewLevel::error, std::format("FAIL: "));
 			m_view->indent();
-			m_view->append(TestViewInterface::error, std::format("{}", e.what()), true);
+			m_view->append(ViewLevel::error, std::format("{}", e.what()), true);
 			m_view->unindent();
 		}
 
@@ -166,18 +166,22 @@ export namespace Testing {
 		}
 
 		virtual void beforeAllTests() override {
-			m_view->addEntry(TestViewInterface::info, std::format("Starting test class: [{}]", name()));
+			m_view->addEntry(ViewLevel::info, std::format("Starting test class: [{}]", name()));
 		}
 
 		virtual void afterAllTests() override {
-			m_view->addEntry(TestViewInterface::info, std::format("-----------------------------------------------------------"));
-			m_view->addEntry(TestViewInterface::info, std::format("Class [{}] results:", name()));
+			printSummary();
+		}
+
+		virtual void printSummary() const override {
+			m_view->addEntry(ViewLevel::info, std::format("-----------------------------------------------------------"));
+			m_view->addEntry(ViewLevel::info, std::format("Class [{}] results:", name()));
 			m_view->indent();
-			m_view->addEntry(TestViewInterface::info, std::format("Completed tests: {}/{}", m_data.succeededTestsCount, m_data.totalTestsCount));
-			m_view->addEntry(TestViewInterface::info, std::format("Failed tests: {}/{}", m_data.failedTestsCount, m_data.totalTestsCount));
-			m_view->addEntry(TestViewInterface::info, std::format("Ignored tests: {}/{}", m_data.ignoredTestsCount, m_data.totalTestsCount));
+			m_view->addEntry(ViewLevel::info, std::format("Completed tests: {}/{}", m_data.succeededTestsCount, m_data.totalTestsCount));
+			m_view->addEntry(ViewLevel::info, std::format("Failed tests: {}/{}", m_data.failedTestsCount, m_data.totalTestsCount));
+			m_view->addEntry(ViewLevel::info, std::format("Ignored tests: {}/{}", m_data.ignoredTestsCount, m_data.totalTestsCount));
 			m_view->unindent();
-			m_view->addEntry(TestViewInterface::info, std::format("==========================================================="));
+			m_view->addEntry(ViewLevel::info, std::format("==========================================================="));
 			m_view->print();
 		}
 

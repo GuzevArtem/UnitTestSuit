@@ -7,23 +7,21 @@ module;
 export module Testing:Interfaces;
 
 import :TestException;
-import :TestContext;
 
 export namespace Testing {
 
 	// TestView
+	enum ViewLevel : uint8_t {
+		invalid = 0,
+		trace,
+		info,
+		warning,
+		error,
+	};
 
 	export
 		class TestViewInterface {
 		public:
-			enum ViewLevel : uint8_t {
-				invalid = 0,
-				trace,
-				info,
-				warning,
-				error,
-			};
-
 			virtual void indent() = 0;
 			virtual void indent(size_t count) = 0;
 			virtual void unindent() = 0;
@@ -35,6 +33,8 @@ export namespace Testing {
 			virtual void addEntry(const ViewLevel level, std::string&& entry, const bool multiline = false) = 0;
 
 			virtual void print() = 0;
+			// returns true if any error was printed
+			virtual bool printErrors() const = 0;
 
 			virtual void clear() = 0;
 
@@ -43,6 +43,38 @@ export namespace Testing {
 			virtual void removeSelf(const TestViewInterface* child) = 0;
 			virtual void registerSelf(const TestViewInterface* child) = 0;
 			virtual TestViewInterface* clone(TestViewInterface* target = nullptr) const = 0;
+	};
+
+	// TestContext
+	export enum TestState {
+		NeverStarted = 0,
+		Started,
+		Suceeded,
+		Failed,
+		Crashed,
+		Stopped,
+		Ignored
+	};
+
+	export
+		class TestContextInterface {
+	public:
+		[[nodiscard]] virtual constexpr TestState state() const = 0;
+		virtual constexpr void state(TestState state) = 0;
+
+	public:
+		virtual void reset() = 0;
+		virtual void start() = 0;
+		virtual void stop() = 0;
+		virtual void finish() = 0;
+		virtual void ignore() = 0;
+		virtual void processException(const TestException& e) = 0;
+		virtual void processException(const std::exception& e) = 0;
+		virtual void terminate(const std::exception& e) = 0;
+
+	public:
+		virtual void log(std::string&& data, bool immidiate = true) = 0;
+		virtual void log(const std::string& data, bool immidiate = true) = 0;
 	};
 
 	// UnitTest
@@ -55,6 +87,8 @@ export namespace Testing {
 		virtual TestState getState() const = 0;
 
 		constexpr virtual char const* name() const = 0;
+
+		virtual TestViewInterface* view() const = 0;
 	};
 
 	// TestClass
@@ -75,18 +109,20 @@ export namespace Testing {
 		virtual void run() = 0;
 		virtual void registerTestMethods() = 0;
 
-		virtual void onTestStart(const UnitTestInterface* test, TestContext* ctx) = 0;
-		virtual void onTestComplete(const UnitTestInterface* test, TestContext* ctx) = 0;
-		virtual void onTestComplete(const UnitTestInterface* test, TestContext* ctx, const IgnoredException& e) = 0;
-		virtual void onTestStop(const UnitTestInterface* test, TestContext* ctx, const TestStopException& e) = 0;
-		virtual void onTestIgnore(const UnitTestInterface* test, TestContext* ctx, const IgnoredException& e) = 0;
-		virtual void onTestFail(const UnitTestInterface* test, TestContext* ctx, const TestException& e) = 0;
-		virtual void onTestFail(const UnitTestInterface* test, TestContext* ctx, const std::exception& e) = 0;
+		virtual void onTestStart(const UnitTestInterface* test, TestContextInterface* ctx) = 0;
+		virtual void onTestComplete(const UnitTestInterface* test, TestContextInterface* ctx) = 0;
+		virtual void onTestComplete(const UnitTestInterface* test, TestContextInterface* ctx, const IgnoredException& e) = 0;
+		virtual void onTestStop(const UnitTestInterface* test, TestContextInterface* ctx, const TestStopException& e) = 0;
+		virtual void onTestIgnore(const UnitTestInterface* test, TestContextInterface* ctx, const IgnoredException& e) = 0;
+		virtual void onTestFail(const UnitTestInterface* test, TestContextInterface* ctx, const TestException& e) = 0;
+		virtual void onTestFail(const UnitTestInterface* test, TestContextInterface* ctx, const std::exception& e) = 0;
 
 		virtual void beforeTest() = 0;
 		virtual void afterTest() = 0;
 		virtual void beforeAllTests() = 0;
 		virtual void afterAllTests() = 0;
+
+		virtual void printSummary() const = 0;
 
 		constexpr TestClassInterface* self() { return this; };
 		constexpr const TestClassInterface* self() const { return this; };

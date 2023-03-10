@@ -99,7 +99,6 @@ export namespace Testing {
 				return std::format("AssertSameException: expected [0x00000000](nullptr) to point at same object as [0x{:#h}]{}\n{}", actual, *actual, inherited::reason());
 			}
 			//both are nullptr, so they are same
-			throw std::runtime_error("Both values are nullpr, but AssertSame failed!");
 		}
 	};
 
@@ -111,7 +110,7 @@ export namespace Testing {
 		AssertNotSameException() {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertNotSameException: expected {} to be not same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
+			return std::format("AssertNotSameException: expected {} to be same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
 		}
 	};
 
@@ -133,7 +132,6 @@ export namespace Testing {
 				return std::format("AssertNotSameException: expected [0x00000000](nullptr) to not point at same object as [0x00000000](nullptr)\n{}", inherited::reason());
 			}
 			//one is not nullptr, so ...
-			throw std::runtime_error(std::format("Only one of values is nullpr, but AssertNotSame failed!\n{}", inherited::reason()));
 		}
 	};
 
@@ -255,6 +253,16 @@ export namespace Testing {
 			std::memset(&example, 0, sizeof(T));
 			equals<T>(example, actual);
 		}
+
+		template<typename T>
+		static void notNullptr(T* actual) noexcept(false) {
+			notEquals<T>((T)nullptr, actual);
+		}
+
+		template<typename T>
+		static void isNullptr(T* actual) noexcept(false) {
+			equals<T>((T)nullptr, actual);
+		}
 		
 		template<typename Base, typename Actual>
 		static void derivedFrom(Actual) noexcept(false) {
@@ -272,7 +280,7 @@ export namespace Testing {
 
 		template<typename T>
 		static void same(T* actual, T* expected) noexcept(false) {
-			if (static_cast<void*>(actual) != static_cast<void*>(expected)) {	//TODO: is works properly?
+			if (static_cast<void*>(actual) != static_cast<void*>(expected)) {	//TODO: is it work properly?
 				throw AssertSameException(actual, expected);
 			}
 		}
@@ -286,7 +294,7 @@ export namespace Testing {
 
 		template<typename T>
 		static void notSame(T* actual, T* expected) noexcept(false) {
-			if (static_cast<void*>(actual) == static_cast<void*>(expected)) {	//TODO: is works properly?
+			if (static_cast<void*>(actual) == static_cast<void*>(expected)) {	//TODO: is it work properly?
 				throw AssertNotSameException(actual, expected);
 			}
 		}
@@ -368,7 +376,7 @@ export namespace Testing {
 					throw AssertNotEqualsException(actual, expected);
 				}
 			}
-			//if sizeof not match they are definetly not equals
+			//if sizeof not match they are definitely not equals
 		}
 
 		template<typename T1, typename T2>
@@ -383,7 +391,7 @@ export namespace Testing {
 					throw AssertNotEqualsException(actual, expected);
 				}
 			}
-			//if sizeof not match they are definetly not equals
+			//if sizeof not match they are definitely not equals
 		}
 
 		template<std::equality_comparable T>
@@ -403,9 +411,14 @@ export namespace Testing {
 
 		//TODO
 
+		// Less
+		// Greater
+		// LessOrEqual
+		// GreaterOrEqual
+
 	public:
 		/*
-		* Newer throw BaseException, throws std::nested_exception or IgnoredException
+		* Never throws BaseException, throws std::nested_exception or IgnoredException
 		*/
 		template<typename _It, typename _Func, bool t_CaptureAllExceptions = false>
 		static void forEach(_It from, _It to, _Func applyable) noexcept(false) {

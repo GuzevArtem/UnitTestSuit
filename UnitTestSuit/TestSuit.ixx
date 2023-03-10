@@ -35,7 +35,11 @@ export namespace Testing {
 
 	public:
 		void run() {
+			size_t finishedClassCount = 0;
 			for (TestClassInterface* cls : m_testClasses) {
+				if (!cls) {
+					throw "TestSuit::run() Trying to run (null) as TestClass!";
+				}
 				try {
 					cls->setUp();
 					cls->beforeAllTests();
@@ -44,11 +48,23 @@ export namespace Testing {
 					cls->tearDown();
 				} catch (const std::exception& e) {
 					if (!processTestException(e)) {
-						m_view->addEntry(TestViewInterface::error, std::format("Test execution for class {} failed.\n {}", cls->name(), e.what()), true);
+						m_view->addEntry(ViewLevel::error, std::format("Test execution for class {} failed.\n {}", cls->name(), e.what()), true);
 						break;
 					}
 				}
 				m_view->print();
+				++finishedClassCount;
+			}
+			m_view->addEntry(ViewLevel::info, std::format("____________________________________________"));
+			m_view->addEntry(ViewLevel::info, std::format(""));
+			m_view->addEntry(ViewLevel::info, std::format("Finished tests execution for {}/{} classes.", finishedClassCount, m_testClasses.size()));
+			m_view->addEntry(ViewLevel::info, std::format(""));
+			m_view->print();
+
+			for (TestClassInterface* cls : m_testClasses) {
+				if (cls && cls->view() && cls->view()->printErrors()) {
+					cls->printSummary();
+				}
 			}
 		}
 
@@ -64,7 +80,7 @@ export namespace Testing {
 			T* cls = new T(std::forward<Args>(args)...);
 			if (m_view) {
 				TestViewInterface* view = m_view->clone();
-				view->parent(view);
+				view->parent(m_view);
 				cls->setView(view);
 			}
 			cls->registerTestMethods();

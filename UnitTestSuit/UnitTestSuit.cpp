@@ -1,4 +1,3 @@
-#include <iostream>
 #include <format>
 #include <chrono>
 
@@ -96,10 +95,11 @@ namespace Testing {
 					Benchmark::doNotOptimizeAway(obj);
 				};
 				auto result = Benchmark::function(100, foo, object);
-				std::cout << std::format("\n100 iterations:   [{}]", result);
-
+				//std::cout << std::format("100 iterations:   [{}]\n", result);
+				ctx.log(std::format("100 iterations:   [{}]", result));
 				result = Benchmark::function(foo, object);
-				std::cout << std::format("\nsingle iteration: [{}]", result);
+				//std::cout << std::format("single iteration: [{}]\n", result);
+				ctx.log(std::format("single iteration: [{}]", result));
 			});
 
 			this->addTest("BenchmarkedTypedTest", [](TestContextTyped<Type>& ctx) -> void {

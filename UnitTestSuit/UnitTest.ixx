@@ -30,13 +30,20 @@ export namespace Testing {
 		functor m_testFunction;
 		ContextType* context;
 		TestClassInterface* m_parent;
+
 	public:
-		constexpr UnitTestBase(char const* name, TestClassInterface* parent, functor func) : context(new ContextType()), m_name(name), m_parent(parent), m_testFunction(func) {}
+		constexpr UnitTestBase(char const* name, TestClassInterface* parent, functor func) : m_name(name), m_parent(parent), m_testFunction(func) {
+			context = new ContextType(this);
+		}
+
 		virtual ~UnitTestBase() {
 			delete context;
 		}
+
 	public:
 		constexpr virtual char const* name() const override { return m_name; }
+
+		virtual TestViewInterface* view() const override { return m_parent ? m_parent->view() : nullptr; }
 
 		virtual void run() override {
 			TestContext* ctx = static_cast<TestContext*>(context);

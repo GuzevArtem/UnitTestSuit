@@ -1,5 +1,6 @@
 module;
 
+#include <string>
 #include <exception>
 #include <vector>
 #include <array>
@@ -7,32 +8,29 @@ module;
 
 export module Testing:TestContext;
 
+import :Interfaces;
 import :TestException;
 
 export namespace Testing {
 
-	export enum TestState {
-		NeverStarted = 0,
-		Started,
-		Suceeded,
-		Failed,
-		Crashed,
-		Stopped,
-		Ignored
-	};
-
-	export class TestContext {
+	export class TestContext : public TestContextInterface {
 	private:
+		UnitTestInterface* m_owner;
 		TestState m_state;
 		std::vector<std::any> m_controlledObjects;
 
 	public:
-		[[nodiscard]] constexpr TestState state() const { return m_state; };
-		constexpr void state(TestState state) { m_state = state; };
+		inline TestContext(UnitTestInterface* owner) : m_owner(owner) {}
+
+	public:
+		[[nodiscard]] virtual constexpr TestState state() const override { return m_state; }
+		virtual constexpr void state(TestState state) override { m_state = state; }
 
 	public:
 		template<typename T>
 		constexpr T createTestObject() { return {}; }
+		template<typename T>
+		constexpr const T createTestObject() const { return {}; }
 
 		template<typename T, class... Args >
 		constexpr T* createTestObjectPointed(Args&&... args) {
@@ -42,50 +40,83 @@ export namespace Testing {
 
 		template<typename T, size_t Count>
 		constexpr std::array<T, Count> createTestObjectsArray() { return {}; }
+		template<typename T, size_t Count>
+		constexpr std::array<const T, Count> createTestObjectsArray() const { return {}; }
 
 	public:
 
-		virtual void reset() {
+		virtual void reset() override {
 			m_state = NeverStarted;
 		}
 
-		virtual void start() {
+		virtual void start() override {
 			m_state = Started;
 		}
 
-		virtual void stop() {
+		virtual void stop() override {
 			m_state = Stopped;
 		}
 
-		virtual void finish() {
+		virtual void finish() override {
 			m_state = Suceeded;
 		}
 
-		virtual void ignore() {
+		virtual void ignore() override {
 			m_state = Ignored;
 		}
 
-		virtual void processException(const TestException& e) {
+		virtual void processException(const TestException& e) override {
 			m_state = Failed;
 		}
 
-		virtual void processException(const std::exception& e) {
+		virtual void processException(const std::exception& e) override {
 			m_state = Crashed;
 		}
 
-		virtual void terminate(const std::exception& e) {
+		virtual void terminate(const std::exception& e) override {
 			m_state = Crashed;
+		}
+
+	public:
+		virtual void log(std::string&& data, bool immidiate = true) override {
+			if (!m_owner) {
+				throw "Invalid TestContext! Owner must be not null!";
+			}
+			if (m_owner->view()) {
+				m_owner->view()->addEntry(ViewLevel::info, data);
+				if (immidiate) {
+					m_owner->view()->print();
+				}
+			}
+		}
+		virtual void log(const std::string& data, bool immidiate = true) override {
+			if (!m_owner) {
+				throw "Invalid TestContext! Owner must be not null!";
+			}
+			if (m_owner->view()) {
+				m_owner->view()->addEntry(ViewLevel::info, data);
+				if (immidiate) {
+					m_owner->view()->print();
+				}
+			}
 		}
 	};
 
 	export
 		template<typename Type>
 	class TestContextTyped : public TestContext {
+
+	public:
+		inline TestContextTyped(UnitTestInterface* owner) : TestContext(owner) {}
+
 	public:
 		constexpr Type createTestObject() { return {}; }
+		constexpr const Type createTestObject() const { return {}; }
 
 		template<size_t Count>
 		constexpr std::array<Type, Count> createTestObjectsArray() { return {}; }
+		template<size_t Count>
+		constexpr std::array<const Type, Count> createTestObjectsArray() const { return {}; }
 
 		template<class... Args >
 		constexpr Type* createTestObjectPointed(Args&&... args) {
