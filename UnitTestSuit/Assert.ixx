@@ -6,10 +6,10 @@ module;
 #include <string>
 #include <format>
 
-export module Assert;
+export module Testing:Assert;
 
-import TestException;
-import TypeParse;
+import :TestException;
+import Helpers;
 
 export namespace Testing {
 
@@ -75,7 +75,7 @@ export namespace Testing {
 		AssertSameException() {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertSameException: expected {} to be same type as {}\n{}", TypeParse<T1>::name, TypeParse<T2>::name, inherited::reason());
+			return std::format("AssertSameException: expected {} to be same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
 		}
 	};
 
@@ -111,7 +111,7 @@ export namespace Testing {
 		AssertNotSameException() {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertNotSameException: expected {} to be not same type as {}\n{}", TypeParse<T1>::name, TypeParse<T2>::name, inherited::reason());
+			return std::format("AssertNotSameException: expected {} to be not same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
 		}
 	};
 
@@ -159,7 +159,7 @@ export namespace Testing {
 
 	public:
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertInheritenceException: expected {} to base class of {}\n{}", TypeParse<Base>::name, TypeParse<Derived>::name, inherited::reason());
+			return std::format("AssertInheritenceException: expected {} to base class of {}\n{}", helper::TypeParse<Base>::name, helper::TypeParse<Derived>::name, inherited::reason());
 		}
 	};
 

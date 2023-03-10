@@ -138,6 +138,8 @@
     <ClCompile Include="Assert.ixx" />
     <ClCompile Include="Benchmark.ixx" />
     <ClCompile Include="Expected.ixx" />
+    <ClCompile Include="FunctionWrapper.ixx" />
+    <ClCompile Include="Helpers.ixx" />
     <ClCompile Include="Interfaces.ixx" />
     <ClCompile Include="Testing.ixx" />
     <ClCompile Include="TestClass.ixx" />

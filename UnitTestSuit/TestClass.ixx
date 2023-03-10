@@ -7,14 +7,14 @@ module;
 #include <map>
 #include <exception>
 
-export module TestClass;
+export module Testing:TestClass;
 
-import Interfaces;
-import TestView;
-import UnitTest;
-import TestContext;
-import TestException;
-import TypeParse;
+import :Interfaces;
+import :TestView;
+import :UnitTest;
+import :TestContext;
+import :TestException;
+import Helpers;
 import Utils;
 
 export namespace Testing {
@@ -236,7 +236,7 @@ export namespace Testing {
 
 		constexpr virtual char const* name() const override {
 			char const* name_ptr = inherited::name();
-			char const* type_name_ptr = TypeParse<Type>::name;
+			char const* type_name_ptr = helper::TypeParse<Type>::name;
 			size_t name_length = utils::length(name_ptr);
 			size_t type_name_length = utils::length(type_name_ptr);
 			std::array<char, 256> result_holder;

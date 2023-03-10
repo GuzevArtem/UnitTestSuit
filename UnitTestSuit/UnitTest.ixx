@@ -4,14 +4,14 @@ module;
 #include <functional>
 #include <concepts>
 
-export module UnitTest;
+export module Testing:UnitTest;
 
-import Interfaces;
-import TestContext;
-import TestException;
-import Benchmark;
-import Assert;
-import TypeParse;
+import :Interfaces;
+import :TestContext;
+import :TestException;
+import :Benchmark;
+import :Assert;
+import Helpers;
 import Utils;
 
 export namespace Testing {
@@ -99,7 +99,7 @@ export namespace Testing {
 
 		constexpr virtual char const* name() const override {
 			char const* name_ptr = inherited::name();
-			char const* type_name_ptr = TypeParse<Type>::name;
+			char const* type_name_ptr = helper::TypeParse<Type>::name;
 			size_t name_length = utils::length(name_ptr);
 			size_t type_name_length = utils::length(type_name_ptr);
 			std::array<char, 256> result_holder;

@@ -13,49 +13,64 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\Testing">
+      <UniqueIdentifier>{4f2128b0-5151-4152-b257-f7205220eabe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utils">
+      <UniqueIdentifier>{b217613e-e993-45dc-b40d-38b14b717651}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Helpers">
+      <UniqueIdentifier>{c240efd3-931d-4a09-842f-a0866fe60330}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="UnitTestSuit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Testing.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Assert.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TestClass.ixx">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="TestView.ixx">
+      <Filter>Source Files\Testing</Filter>
     </ClCompile>
     <ClCompile Include="UnitTest.ixx">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Testing</Filter>
     </ClCompile>
-    <ClCompile Include="TestContext.ixx">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Testing.ixx">
+      <Filter>Source Files\Testing</Filter>
     </ClCompile>
     <ClCompile Include="TestSuit.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Expected.ixx">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Testing</Filter>
     </ClCompile>
     <ClCompile Include="TestException.ixx">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Testing</Filter>
     </ClCompile>
-    <ClCompile Include="TypeParse.ixx">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="TestContext.ixx">
+      <Filter>Source Files\Testing</Filter>
     </ClCompile>
-    <ClCompile Include="Benchmark.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Utils.ixx">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="TestClass.ixx">
+      <Filter>Source Files\Testing</Filter>
     </ClCompile>
     <ClCompile Include="Interfaces.ixx">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Testing</Filter>
     </ClCompile>
-    <ClCompile Include="TestView.ixx">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Expected.ixx">
+      <Filter>Source Files\Testing</Filter>
+    </ClCompile>
+    <ClCompile Include="Benchmark.ixx">
+      <Filter>Source Files\Testing</Filter>
+    </ClCompile>
+    <ClCompile Include="Assert.ixx">
+      <Filter>Source Files\Testing</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils.ixx">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="FunctionWrapper.ixx">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Helpers.ixx">
+      <Filter>Source Files\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="TypeParse.ixx">
+      <Filter>Source Files\Helpers</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -6,7 +6,7 @@ module;
 #include <string>
 #include <stacktrace>
 
-export module TestException;
+export module Testing:TestException;
 
 export namespace Testing {
 

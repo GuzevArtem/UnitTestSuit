@@ -4,7 +4,7 @@ module;
 #include <type_traits>
 #include <format>
 
-export module Benchmark;
+export module Testing:Benchmark;
 
 export namespace Testing {
 

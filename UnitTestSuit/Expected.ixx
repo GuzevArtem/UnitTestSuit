@@ -5,10 +5,10 @@ module;
 #include <string>
 #include <format>
 
-export module Expected;
+export module Testing:Expected;
 
-import TestException;
-import TypeParse;
+import :TestException;
+import Helpers;
 
 export namespace Testing {
 
@@ -19,7 +19,7 @@ export namespace Testing {
 	public:
 		[[nodiscard]] virtual std::string reason() const override {
 			if constexpr (t_AnyException) {
-				return std::format("ExpectedFailedException: expected \"{}\", but raised {}.\n{}", static_cast<char const*>(TypeParse<ExceptionType>::name), inherited::what(), std::to_string(inherited::where()));
+				return std::format("ExpectedFailedException: expected \"{}\", but raised {}.\n{}", static_cast<char const*>(helper::TypeParse<ExceptionType>::name), inherited::what(), std::to_string(inherited::where()));
 			} else {
 				std::format("ExpectedFailedException: {}\n{}", inherited::what(), std::to_string(inherited::where()));
 			}

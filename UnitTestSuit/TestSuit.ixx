@@ -4,11 +4,11 @@ module;
 #include <concepts>
 #include <vector>
 
-export module TestSuit;
+export module Testing:TestSuit;
 
-import Interfaces;
-import TestView;
-import TestClass;
+import :Interfaces;
+import :TestView;
+import :TestClass;
 
 export namespace Testing {
 

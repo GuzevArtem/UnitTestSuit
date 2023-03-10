@@ -7,9 +7,9 @@ module;
 #include <ranges>
 #include <string_view>
 
-export module TestView;
+export module Testing:TestView;
 
-import Interfaces;
+import :Interfaces;
 
 export namespace Testing {
 

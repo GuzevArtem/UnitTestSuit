@@ -4,10 +4,10 @@ module;
 #include <vector>
 #include <exception>
 
-export module Interfaces;
+export module Testing:Interfaces;
 
-import TestException;
-import TestContext;
+import :TestException;
+import :TestContext;
 
 export namespace Testing {
 
