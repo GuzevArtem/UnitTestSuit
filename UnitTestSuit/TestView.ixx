@@ -220,7 +220,6 @@ export namespace Testing {
 			return inherited::clone(target);
 		}
 	public:
-		static TestViewInterface* instance() { return new TestViewConsole(); }
+		static TestViewInterface* create() { return new TestViewConsole(); }
 	};
-
 }

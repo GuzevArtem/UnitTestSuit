@@ -46,7 +46,7 @@ export namespace Testing {
 	template<typename Self>
 	class TestClassInner : public TestClassInterface {
 	private:
-		TestViewInterface* m_view = TestViewConsole::instance();
+		TestViewInterface* m_view = TestViewConsole::create();
 
 		char const* m_name;
 		TestData m_data;

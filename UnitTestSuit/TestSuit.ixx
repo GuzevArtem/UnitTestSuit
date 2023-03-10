@@ -18,7 +18,7 @@ export namespace Testing {
 	export
 	class TestSuit {
 	public:
-		constexpr TestSuit(TestViewInterface* view = TestViewConsole::instance()) : m_view(view), m_registeredTests(0), m_testClasses() {}
+		constexpr TestSuit(TestViewInterface* view = TestViewConsole::create()) : m_view(view), m_registeredTests(0), m_testClasses() {}
 		constexpr virtual ~TestSuit() {
 			for (TestClassInterface* testClass : m_testClasses) {
 				delete testClass;
