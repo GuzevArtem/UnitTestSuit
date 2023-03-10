@@ -4,7 +4,7 @@ module;
 
 export module Helpers:TypeParse;
 
-namespace helper {
+export namespace helper {
 	export
 		template <typename T>
 	struct TypeParse {
