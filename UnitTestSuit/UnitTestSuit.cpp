@@ -35,7 +35,7 @@ namespace Testing {
 		}
 
 		static void SampleTestStatic(TestContext& ctx) {
-			Assert::Fail();
+			Test::ignore();
 		}
 
 		constexpr virtual void registerTestMethods() override {
@@ -45,6 +45,32 @@ namespace Testing {
 
 			this->addTest("FailTest", [](TestContext& ctx) -> void {
 				Assert::Fail();
+			});
+
+			this->addTest("StopTest", [](TestContext& ctx) -> void {
+				Test::stop();
+			});
+
+			this->addTest("ExpectedException", [](TestContext& ctx) -> void {
+				Expected<AssertEqualsException<int, int>>::during([]() {
+					Assert::equals(1, 0);
+				});
+			});
+
+			this->addTest("ExpectedMatchedException", [](TestContext& ctx) -> void {
+				Expected<AssertEqualsException<int, int>>::during([]() {
+					Assert::equals(1, 0);
+				}, [](const AssertEqualsException<int, int>& actual) -> bool {
+					return true;
+				});
+			});
+
+			this->addTest("ExpectedExpectedException", [](TestContext& ctx) -> void {
+				Expected<ExpectedFailedException<void>>::during([]() {
+					Expected<>::during([]() {
+						Assert::equals(0, 0);
+					});
+				});
 			});
 
 			this->addTest("Creation", [](TestContext& ctx) -> void {
@@ -106,14 +132,14 @@ namespace Testing {
 				ctx.log(std::format("single iteration: [{}]", result));
 			});
 
-			this->addTest("BenchmarkedTypedTest", [](TestContextTyped<Type>& ctx) -> void {
+			this->addBenchmarkTest("BenchmarkedTypedTest", [](TestContextTyped<Type>& ctx) -> void {
 				Type object = ctx.createTestObject();
 
 				Assert::isZero(object);
 				Assert::same<Type>(object);
 				Assert::notEquals(object, (Type)1);
 				Assert::equals(object, (Type)0);
-			});
+			}, 5);
 		}
 	};
 }

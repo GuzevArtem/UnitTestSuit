@@ -130,18 +130,19 @@ struct std::formatter<Testing::Benchmark::Result> {
 
 	auto format(const Testing::Benchmark::Result& obj, std::format_context& ctx) {
 
-		if (!flags) {
+		if (!flags || (flags == e_silent)) {
+			bool silent = flags & e_silent;
 			return std::format_to(ctx.out(),
-								  "iterations={:>8}, "
-								  "total={}, "
-								  "average={}, "
-								  "fastest={}, "
-								  "slowest={}",
-								  obj.iterations,
-								  std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_total),
-								  std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_average),
-								  std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_least),
-								  std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_most));
+								  "{}{:>8}, "
+								  "{}{}, "
+								  "{}{}, "
+								  "{}{}, "
+								  "{}{}",
+								  silent ? "" : "iterations=",	obj.iterations,
+								  silent ? "" : "total=",		std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_total),
+								  silent ? "" : "average=",		std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_average),
+								  silent ? "" : "fastest=",		std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_least),
+								  silent ? "" : "slowest=",		std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_most));
 		}
 
 		auto output = ctx.out();

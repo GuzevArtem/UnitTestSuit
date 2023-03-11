@@ -42,13 +42,22 @@ export namespace Testing {
 				if (!cls) {
 					throw "TestSuit::run() Trying to run (null) as TestClass!";
 				}
+				bool tearingDownStarted = false;
 				try {
 					cls->setUp();
 					cls->beforeAllTests();
 					cls->run();
 					cls->afterAllTests();
+					tearingDownStarted = true;
 					cls->tearDown();
 				} catch (const std::exception& e) {
+					if (!tearingDownStarted) {
+						try {
+							cls->tearDown();
+						} catch (const std::exception& e) {
+							m_view->addEntry(ViewLevel::error, std::format("TearDown for class {} failed.\n {}", cls->name(), e.what()), true);
+						}
+					}
 					if (!processTestException(e)) {
 						m_view->addEntry(ViewLevel::error, std::format("Test execution for class {} failed.\n {}", cls->name(), e.what()), true);
 						break;

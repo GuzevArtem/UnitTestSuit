@@ -15,7 +15,7 @@ export namespace Testing {
 
 	export class TestContext : public TestContextInterface {
 	private:
-		UnitTestInterface* m_owner;
+		mutable UnitTestInterface* m_owner;
 		TestState m_state;
 		std::vector<std::any> m_controlledObjects;
 
@@ -78,7 +78,7 @@ export namespace Testing {
 		}
 
 	public:
-		virtual void log(std::string&& data, bool immidiate = true) override {
+		virtual void log(std::string&& data, bool immidiate = true) const override {
 			if (!m_owner) {
 				throw "Invalid TestContext! Owner must be not null!";
 			}
@@ -89,7 +89,7 @@ export namespace Testing {
 				}
 			}
 		}
-		virtual void log(const std::string& data, bool immidiate = true) override {
+		virtual void log(const std::string& data, bool immidiate = true) const override {
 			if (!m_owner) {
 				throw "Invalid TestContext! Owner must be not null!";
 			}

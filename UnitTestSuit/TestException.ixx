@@ -93,7 +93,7 @@ export namespace Testing {
 	private:
 
 	public:
-		TestStopException() : inherited("Test execuion was stopped by user.") {}
+		TestStopException() : inherited("Test execution was stopped by user.") {}
 
 		[[nodiscard]] virtual std::string reason() const {
 			return std::format("TestStopException: {}", inherited::what());
@@ -101,6 +101,17 @@ export namespace Testing {
 
 		[[nodiscard]] virtual std::stacktrace where() const {
 			return std::stacktrace::current();
+		}
+	};
+
+	export
+	struct Test {
+		static void ignore() noexcept(false) {
+			throw IgnoredException();
+		}
+
+		static void stop() noexcept(false) {
+			throw TestStopException();
 		}
 	};
 }

@@ -7,7 +7,12 @@ export module LibTesting;
 
 namespace Testing {
 
+	// Controls
+	struct LIBUNITTESTSUIT_API Test;
+
 	//Test View
+	enum LIBUNITTESTSUIT_API ViewLevel;
+
 	class LIBUNITTESTSUIT_API TestViewInterface;
 
 	class LIBUNITTESTSUIT_API TestViewConsole;
@@ -42,6 +47,8 @@ namespace Testing {
 
 	//Test Context
 	enum LIBUNITTESTSUIT_API TestState;
+
+	class LIBUNITTESTSUIT_API TestContextInterface;
 
 	class LIBUNITTESTSUIT_API TestContext;
 

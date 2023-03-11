@@ -139,15 +139,20 @@ export namespace Testing {
 
 	template<TestContextType ContextType, FunctorType<void, ContextType&> functor = std::function<void(ContextType&)>>
 	struct runBenchmarked {
-		functor func;
-		TestViewInterface* view;
+		functor m_func;
+		TestViewInterface* m_view;
+		size_t m_iterations;
 
-		inline runBenchmarked(functor _func, TestViewInterface* view) : func(_func), view(view) {}
+		inline runBenchmarked(functor func, TestViewInterface* view, size_t iterations = 1) : m_func(func), m_view(view), m_iterations(iterations) {}
 
 		inline constexpr void operator()(ContextType& context) const {
-			Benchmark::Result result = Benchmark::function(func, context);
-			if (view) {
-				view->addEntry(TestViewInterface::info, std::format("\tTest run time = [{:#t}]\t", result), true);
+			Benchmark::Result result = Benchmark::function(m_iterations, m_func, context);
+			if (m_view) {
+				if (m_iterations == 1) {
+					m_view->addEntry(ViewLevel::info, std::format("\tTest run time = [{:#t}]\t", result), true);
+				} else {
+					m_view->addEntry(ViewLevel::info, std::format("\tTest run = [{}]\n", result), true);
+				}
 			}
 		}
 	};
@@ -156,13 +161,23 @@ export namespace Testing {
 		template<FunctorType<void, TestContext&> functor = std::function<void(TestContext&)>>
 	class BenchmarkUnitTest : public UnitTest<functor> {
 	public:
-		constexpr BenchmarkUnitTest(char const* name, TestClassInterface* parent, functor func) : UnitTest(name, parent, runBenchmarked<TestContext, functor>(func, parent ? parent->view() : nullptr)) {}
+		constexpr BenchmarkUnitTest(char const* name, TestClassInterface* parent, functor func, size_t iterations = 1) : UnitTest<>(name, parent, runBenchmarked<TestContext, functor>(func, parent ? parent->view() : nullptr, iterations)) {}
+
+		template<typename Function>
+		static void instance(std::vector<UnitTestInterface*>& result, char const* name, TestClassInterface* parent, Function func, size_t iterations = 1) {
+			result.emplace_back(new BenchmarkUnitTest(name, parent, func, iterations));
+		}
 	};
 
 	export
 		template<typename Type, FunctorType<void, TestContextTyped<Type>&> functor = std::function<void(TestContextTyped<Type>&)>>
 	class BenchmarkUnitTestTyped : public UnitTestTyped<Type, functor> {
 	public:
-		constexpr BenchmarkUnitTestTyped(char const* name, TestClassInterface* parent, functor func) : UnitTestTyped<Type>(name, parent, runBenchmarked<TestContextTyped<Type>, functor>(func, parent ? parent->view() : nullptr)) {}
+		constexpr BenchmarkUnitTestTyped(char const* name, TestClassInterface* parent, functor func, size_t iterations = 1) : UnitTestTyped<Type>(name, parent, runBenchmarked<TestContextTyped<Type>, functor>(func, parent ? parent->view() : nullptr, iterations)) {}
+
+		template<typename Function>
+		static void instance(std::vector<UnitTestInterface*>& result, char const* name, TestClassInterface* parent, Function func, size_t iterations = 1) {
+			result.emplace_back(new BenchmarkUnitTestTyped<Type>(name, parent, func, iterations));
+		}
 	};
 }

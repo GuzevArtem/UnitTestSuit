@@ -220,6 +220,19 @@ export namespace Testing {
 				UnitTest<Function>::instance(inherited::getAllTests(), name, this, func);
 			}
 		}
+
+		template<typename Function>
+		void addBenchmarkTest(char const* name, Function func, size_t iterations = 1) {
+			if constexpr (is_static_function_pointer<Function>::value) {
+				utils::FunctionStaticWrapper<void, TestContext&> function((void(*)(TestContext&))(func));
+				BenchmarkUnitTest<utils::FunctionStaticWrapper<void, TestContext&>>::instance(inherited::getAllTests(), name, this, function, iterations);
+			} else if constexpr (std::is_member_function_pointer_v<Function>) {
+				utils::FunctionWrapper<Self, void, TestContext&> function(static_cast<const Self*>(this), (void(Self::*)(TestContext&))(func));
+				BenchmarkUnitTest<utils::FunctionWrapper<Self, void, TestContext&>>::instance(inherited::getAllTests(), name, this, function, iterations);
+			} else {
+				BenchmarkUnitTest<Function>::instance(inherited::getAllTests(), name, this, func, iterations);
+			}
+		}
 	};
 
 	export
@@ -239,6 +252,19 @@ export namespace Testing {
 				UnitTestTyped<Type, utils::FunctionWrapper<Self<Type>, void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function);
 			} else {
 				UnitTestTyped<Type, Function>::instance(inherited::getAllTests(), name, this, func);
+			}
+		}
+
+		template<typename Function>
+		void addBenchmarkTest(char const* name, Function func, size_t iterations = 1) {
+			if constexpr (is_static_function_pointer<Function>::value) {
+				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
+				BenchmarkUnitTestTyped<Type, utils::FunctionStaticWrapper<void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function, iterations);
+			} else if constexpr (std::is_member_function_pointer_v<Function>) {
+				utils::FunctionWrapper<Self<Type>, void, TestContextTyped<Type>&> function(static_cast<const Self<Type>*>(this), (void(Self<Type>::*)(TestContextTyped<Type> &))(func));
+				BenchmarkUnitTestTyped<Type, utils::FunctionWrapper<Self<Type>, void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function, iterations);
+			} else {
+				BenchmarkUnitTestTyped<Type, Function>::instance(inherited::getAllTests(), name, this, func, iterations);
 			}
 		}
 

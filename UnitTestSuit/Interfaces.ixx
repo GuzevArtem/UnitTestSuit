@@ -44,7 +44,7 @@ export namespace Testing {
 	};
 
 	// TestContext
-	export enum TestState {
+	export enum TestState : uint8_t {
 		NeverStarted = 0,
 		Started,
 		Suceeded,
@@ -71,8 +71,8 @@ export namespace Testing {
 		virtual void terminate(const std::exception& e) = 0;
 
 	public:
-		virtual void log(std::string&& data, bool immidiate = true) = 0;
-		virtual void log(const std::string& data, bool immidiate = true) = 0;
+		virtual void log(std::string&& data, bool immidiate = true) const = 0;
+		virtual void log(const std::string& data, bool immidiate = true) const = 0;
 	};
 
 	// UnitTest
