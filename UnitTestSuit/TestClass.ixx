@@ -185,6 +185,10 @@ export namespace Testing {
 			m_view->print();
 		}
 
+		virtual size_t countTestFailed() const override {
+			return m_data.failedTestsCount;
+		}
+
 		virtual void run() override {
 			m_data.reset();
 			m_data.totalTestsCount = m_unitTests.size();

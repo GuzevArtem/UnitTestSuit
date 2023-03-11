@@ -68,7 +68,7 @@ export namespace Testing {
 		}
 		virtual TestViewInterface* clone(TestViewInterface* target) const override {
 			if (!target) {
-				return target;
+				return nullptr;
 			}
 
 			TestViewBase* asBase = static_cast<TestViewBase*>(target);
@@ -162,6 +162,9 @@ export namespace Testing {
 				} else {
 					Entry& entry = m_entries.back();
 					entry.data.append(appendix);
+					if (entry.level < level) {
+						entry.level = level;
+					}
 				}
 			}
 		}
@@ -220,59 +223,105 @@ export namespace Testing {
 				return result;
 			}
 
-			constexpr size_t linesOfCurrentIndentIfError = 2;
+#pragma message("Made `linesOfCurrentIndentIfError` adjustable?") 
+			constexpr size_t linesOfCurrentIndentIfError = 5;
 
 			std::vector<Entry> buff;
-			bool skip_next_pop = false;
-			size_t prev_indent;
-			size_t error_count = linesOfCurrentIndentIfError;
 			{
-				Entry e = m_entries.front();
-				buff.emplace_back(e);
-				prev_indent = e.indent;
-			}
-
-			for (size_t i = 0; i < m_entries.size(); ++i) {
-				Entry e = m_entries[i];
-				bool already_added = false;
-				if (prev_indent < e.indent) {
-					buff.emplace_back(e);
-					prev_indent = e.indent;
-					already_added = true;
-				} else if (prev_indent == e.indent && e.level != ViewLevel::error) {
-					buff.pop_back();
-					buff.emplace_back(e);
-					error_count = linesOfCurrentIndentIfError;
-					skip_next_pop = false;
-					continue;
-				}
-
-				if (error_count > 0 && e.level == ViewLevel::error) {
-					--error_count;
-					result = true;
-					if (!already_added) {
-						buff.emplace_back(e);
+				bool skip_next_pop = false;
+				size_t prev_indent;
+				size_t error_count = linesOfCurrentIndentIfError;
+				size_t skipped_error_lines = 0;
+				auto errorFound = [&buff, &prev_indent, &skipped_error_lines, &skip_next_pop, &error_count](const Entry& e) -> void {
+					if (error_count == 0) {
+						++skipped_error_lines;
+						return;
+					}
+					if (!skip_next_pop && prev_indent == e.indent && buff.size()) {
+						buff.pop_back();
 					}
 					skip_next_pop = true;
-				}
-
-				if (prev_indent > e.indent) {
-					if (!skip_next_pop) {
-						buff.pop_back();
+					if (prev_indent == e.indent) {
+						--error_count;
+					} else {
+						prev_indent = e.indent;
+						error_count = linesOfCurrentIndentIfError;
+					}
+					buff.push_back(e);
+				};
+				auto normalFound = [&buff, &error_count, &prev_indent, &skip_next_pop, &linesOfCurrentIndentIfError](const Entry& e) -> void {
+					error_count = linesOfCurrentIndentIfError;
+					if (skip_next_pop) {
 						skip_next_pop = false;
 					}
+					buff.pop_back();
+					buff.emplace_back(e);
 					prev_indent = e.indent;
+				};
+
+				auto processEntry = [&result , &prev_indent, &buff, &skipped_error_lines, &errorFound, &normalFound, &linesOfCurrentIndentIfError](const Entry& e) -> void {
+					if (buff.empty()) {
+						prev_indent = e.indent;
+						if (e.level >= ViewLevel::error) {
+							result = true;
+							errorFound(e);
+						} else {
+							buff.push_back(e);
+						}
+						return;
+					}
+
+					if (e.level >= ViewLevel::error) {
+						result = true;
+						errorFound(e);
+					} else {
+						if (skipped_error_lines > 0) {
+							Entry skippedData;
+							skippedData.indent = prev_indent;
+							skippedData.level = ViewLevel::error;
+							skippedData.data = std::format("\t\t... {} lines skipped ...", skipped_error_lines);
+							if (linesOfCurrentIndentIfError > 0) {
+								buff.pop_back();
+							}
+							buff.push_back(skippedData);
+						}
+						if (e.indent > prev_indent) {
+							buff.push_back(e);
+							prev_indent = e.indent;
+						} else {
+							if (skipped_error_lines > 0) {
+								buff.emplace_back(Entry{}); //add dummy to be pop
+							}
+							normalFound(e);
+						}
+						skipped_error_lines = 0;
+					}
+				};
+
+				for (const Entry& e : m_entries) {
+					processEntry(e);
 				}
 			}
 
 			if (!result) {
-				return false; //buff is useless at this point
+				// no errors
+				return false;
+			}
+			{ // rollback unrequired entries
+				Entry e = buff.back();
+				while (e.level < ViewLevel::error) {
+					buff.pop_back();
+					if (buff.empty()) {
+						return false;
+					}
+					e = buff.back();
+				}
 			}
 
 			for (const Entry& entry : buff) {
 				outStream(ViewLevel::error) << std::format("{}\n", entry.data);
 			}
-			return result;
+			return true;
 		}
 
 		virtual void indent(size_t count) override { 

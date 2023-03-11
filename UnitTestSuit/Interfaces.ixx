@@ -124,7 +124,29 @@ export namespace Testing {
 
 		virtual void printSummary() const = 0;
 
+		virtual size_t countTestFailed() const = 0;
+
 		constexpr TestClassInterface* self() { return this; };
 		constexpr const TestClassInterface* self() const { return this; };
 	};
+}
+
+export namespace std {
+	[[nodiscard]]
+	constexpr string to_string(const Testing::ViewLevel& value) {
+		switch (value) {
+			case Testing::ViewLevel::invalid:
+				return string("invalid");
+			case Testing::ViewLevel::trace:
+				return string("trace");
+			case Testing::ViewLevel::info:
+				return string("info");
+			case Testing::ViewLevel::warning:
+				return string("warning");
+			case Testing::ViewLevel::error:
+				return string("error");
+			default:
+				return string("undefined");
+		}
+	}
 }

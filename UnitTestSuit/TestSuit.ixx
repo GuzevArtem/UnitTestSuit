@@ -55,14 +55,21 @@ export namespace Testing {
 				m_view->print();
 				++finishedClassCount;
 			}
-			m_view->addEntry(ViewLevel::info, std::format("____________________________________________"));
+			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format(""));
 			m_view->addEntry(ViewLevel::info, std::format("Finished tests execution for {}/{} classes.", finishedClassCount, m_testClasses.size()));
+			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format(""));
 			m_view->print();
 
 			for (TestClassInterface* cls : m_testClasses) {
-				if (cls && cls->view() && cls->view()->printErrors()) {
+				const bool hasAnyFailedTests = (cls->countTestFailed() > 0);
+				if (hasAnyFailedTests) {
+					m_view->addEntry(ViewLevel::info, std::format("Class {} has {} failed tests:", cls->name(), cls->countTestFailed()));
+					m_view->print();
+				}
+				cls->view()->printErrors();
+				if (hasAnyFailedTests) {
 					cls->printSummary();
 				}
 			}
