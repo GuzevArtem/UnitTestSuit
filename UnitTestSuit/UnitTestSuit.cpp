@@ -43,6 +43,10 @@ namespace Testing {
 			this->addTest("SampleTestTyped", &MyTestClass<Type>::SampleTestTyped);
 			this->addTest("SampleStaticTest", &MyTestClass<Type>::SampleTestStatic);
 
+			this->addTest("FailTest", [](TestContext& ctx) -> void {
+				Assert::Fail();
+			});
+
 			this->addTest("Creation", [](TestContext& ctx) -> void {
 				uint64_t object = ctx.createTestObject<uint64_t>();
 

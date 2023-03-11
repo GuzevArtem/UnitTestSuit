@@ -27,14 +27,12 @@ export namespace Testing {
 			virtual void unindent() = 0;
 			virtual void unindent(size_t count) = 0;
 
-			virtual void append(const ViewLevel level, const std::string& appendix, const bool multiline = false) = 0;
-			virtual void append(const ViewLevel level, std::string&& appendix, const bool multiline = false) = 0;
-			virtual void addEntry(const ViewLevel level, const std::string& entry, const bool multiline = false) = 0;
-			virtual void addEntry(const ViewLevel level, std::string&& entry, const bool multiline = false) = 0;
+			virtual void append(const ViewLevel level, const std::string& appendix, const bool multiline = false, size_t maxLines = static_cast<size_t>(-1)) = 0;
+			virtual void append(const ViewLevel level, std::string&& appendix, const bool multiline = false, size_t maxLines = static_cast<size_t>(-1)) = 0;
+			virtual void addEntry(const ViewLevel level, const std::string& entry, const bool multiline = false, size_t maxLines = static_cast<size_t>(- 1)) = 0;
+			virtual void addEntry(const ViewLevel level, std::string&& entry, const bool multiline = false, size_t maxLines = static_cast<size_t>(-1)) = 0;
 
 			virtual void print() = 0;
-			// returns true if any error was printed
-			virtual bool printErrors() const = 0;
 
 			virtual void clear() = 0;
 
@@ -87,6 +85,8 @@ export namespace Testing {
 		virtual TestState getState() const = 0;
 
 		constexpr virtual char const* name() const = 0;
+
+		virtual std::string errorMessage() const = 0;
 
 		virtual TestViewInterface* view() const = 0;
 	};

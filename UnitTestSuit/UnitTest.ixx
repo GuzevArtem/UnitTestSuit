@@ -28,16 +28,17 @@ export namespace Testing {
 	private:
 		char const* m_name;
 		functor m_testFunction;
-		ContextType* context;
+		ContextType* m_context;
 		TestClassInterface* m_parent;
+		std::string m_errorMessage;
 
 	public:
 		constexpr UnitTestBase(char const* name, TestClassInterface* parent, functor func) : m_name(name), m_parent(parent), m_testFunction(func) {
-			context = new ContextType(this);
+			m_context = new ContextType(this);
 		}
 
 		virtual ~UnitTestBase() {
-			delete context;
+			delete m_context;
 		}
 
 	public:
@@ -46,43 +47,51 @@ export namespace Testing {
 		virtual TestViewInterface* view() const override { return m_parent ? m_parent->view() : nullptr; }
 
 		virtual void run() override {
-			TestContext* ctx = static_cast<TestContext*>(context);
+			TestContext* ctx = static_cast<TestContext*>(m_context);
 			ctx->reset();
 			try {
-				m_parent->onTestStart(this, context);
+				m_parent->onTestStart(this, m_context);
 				ctx->start();
-				m_testFunction(*context);
+				m_testFunction(*m_context);
 				ctx->finish();
-				m_parent->onTestComplete(this, context);
+				m_parent->onTestComplete(this, m_context);
 			} catch (const TestStopException& e) {
 				ctx->stop();
-				m_parent->onTestStop(this, context, e);
+				m_parent->onTestStop(this, m_context, e);
+				m_errorMessage = e.reason();
 			} catch (const IgnoredException& e) {
 				if (e.hasAny()) {
 					ctx->finish();
-					m_parent->onTestComplete(this, context, e);
+					m_parent->onTestComplete(this, m_context, e);
 				} else {
 					ctx->ignore();
-					m_parent->onTestIgnore(this, context, e);
+					m_parent->onTestIgnore(this, m_context, e);
+					m_errorMessage = e.reason();
 				}
 			} catch (const TestException& e) {
 				ctx->processException(e);
-				m_parent->onTestFail(this, context, e);
+				m_parent->onTestFail(this, m_context, e);
+				m_errorMessage = e.reason();
 			} catch (const AssertException& e) {
 				const TestException& te = TestException(e.reason());
 				ctx->processException(te);
-				m_parent->onTestFail(this, context, te);
+				m_parent->onTestFail(this, m_context, te);
+				m_errorMessage = te.reason();
 			} catch (const UnexpectedException& e) {
 				const TestException& te = TestException(e.reason());
 				ctx->processException(te);
-				m_parent->onTestFail(this, context, te);
+				m_parent->onTestFail(this, m_context, te);
+				m_errorMessage = te.reason();
 			} catch (const std::exception& e) {
 				ctx->terminate(e);
-				m_parent->onTestFail(this, context, e);
+				m_parent->onTestFail(this, m_context, e);
+				m_errorMessage = std::string(e.what());
 			}
 		}
 
-		virtual TestState getState() const override { return static_cast<TestContext*>(context)->state(); }
+		virtual TestState getState() const override { return static_cast<TestContext*>(m_context)->state(); }
+
+		virtual std::string errorMessage() const override { return m_errorMessage;  };
 	};
 
 	export

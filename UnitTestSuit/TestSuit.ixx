@@ -27,6 +27,8 @@ export namespace Testing {
 				delete m_view;
 			}
 		}
+	public:
+		size_t m_errorLinesToPrint = 5;
 
 	private:
 		TestViewInterface* m_view;
@@ -56,6 +58,8 @@ export namespace Testing {
 				++finishedClassCount;
 			}
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
+			m_view->addEntry(ViewLevel::info, std::format("__________________ TEST RUN COMPLETED _____________________"));
+			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format(""));
 			m_view->addEntry(ViewLevel::info, std::format("Finished tests execution for {}/{} classes.", finishedClassCount, m_testClasses.size()));
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
@@ -63,14 +67,19 @@ export namespace Testing {
 			m_view->print();
 
 			for (TestClassInterface* cls : m_testClasses) {
-				const bool hasAnyFailedTests = (cls->countTestFailed() > 0);
-				if (hasAnyFailedTests) {
-					m_view->addEntry(ViewLevel::info, std::format("Class {} has {} failed tests:", cls->name(), cls->countTestFailed()));
+				if (cls->countTestFailed() > 0) {
+					m_view->addEntry(ViewLevel::info, std::format("Class \"{}\" has {} failed tests:", cls->name(), cls->countTestFailed()));
+					m_view->indent();
+					for (auto test : cls->getAllTests()) {
+						if (test->getState() == TestState::Failed || test->getState() == TestState::Crashed) {
+							m_view->addEntry(ViewLevel::info, std::format("Test \"{}\":\t", test->name()));
+							m_view->indent();
+							m_view->addEntry(ViewLevel::info, test->errorMessage(), true, m_errorLinesToPrint);
+							m_view->unindent();
+						}
+					}
+					m_view->unindent();
 					m_view->print();
-				}
-				cls->view()->printErrors();
-				if (hasAnyFailedTests) {
-					cls->printSummary();
 				}
 			}
 		}
