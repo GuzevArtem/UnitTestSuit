@@ -8,8 +8,8 @@ Add
 #include <chrono>
 #include <ranges>
 ```
-to yout test class in related "unresolved external symbol" error occured.
-Should be fixed after c++23 standart library module appearence.
+to your test class if related "unresolved external symbol" error occurred.
+Should be fixed after c++23 standard library module appearance.
 
 ## Usage
 
@@ -135,17 +135,59 @@ public:
 ```
 
 ### Work with environment
-
 ```cplusplus
 	constexpr virtual void setUp() override {
 		// will be called on start of test class execution
 	};
 	constexpr virtual void tearDown() override {
 		// will be called on end of test class execution
+		// guaranteed to be called if test execution fails
+	};
+```
+### Setup all tests
+```cplusplus
+	virtual void beforeAllTests() override {
+		inherited::beforeAllTests(); // affects output only
+		// will be called on start of test class execution after setUp
+	};
+	virtual void afterAllTests() override {
+		inherited::afterAllTests(); // affects output only
+		// will be called on end of test class execution before tearDown
 	};
 ```
 
-## Pipeline
+### Setup individual tests
+```cplusplus
+	virtual void beforeTest() override {
+		inherited::beforeTest(); // affects output only
+		// will be called on start of each test
+	};
+	virtual void afterTest() override {
+		inherited::afterTest(); // affects output only
+		// will be called after each test
+	};
+```
+
+### Process test class results
+```cplusplus
+class MyTestClass : ...
+	...
+	// after tests execution
+	// value updates after each test run
+	{
+		...
+		size_t total = getTotalTestsCount();
+		size_t started = getStartedTestsCount();
+		size_t completed = getCompletedTestsCount();
+		size_t failed = getFailedTestsCount();
+		size_t ignored = getIgnoredTestsCount();
+		size_t stopped = getStoppedTestsCount();
+		...
+	}
+}
+```
+
+## Components
 
 ### TestSuit
 TestSuit is global configuration unit for all test classes.
@@ -210,8 +252,8 @@ this->addBenchmarkTest("MyBenchmarkedTest", [](TestContext& ctx) -> void { //Tes
 
 ### Direct Test controls
 
-```Test::stop();``` will stop test execution immidietly (by throwing exception).
-```Test::ignore();``` will stop test execution immidietly (by throwing exception), but mark test as Completed.
+```Test::stop();``` will stop test execution immediately (by throwing exception), but count test as Completed.
+```Test::ignore();``` will stop test execution immediately (by throwing exception), mark test as Ignored.
 
 ### Expect
 
@@ -240,3 +282,6 @@ Expected<CustomUserExceptionType>::during([]() {
 });
 ```
 If captured exception are not convertible to expected type, or compare function returns false, than ```ExpectedExceptionFail``` will be raised, that will fail test.
+
+> If ExceptionType is not provided, then compare function should accept ```const std::exception&``` as argument.
+

@@ -126,6 +126,13 @@ export namespace Testing {
 
 		virtual size_t countTestFailed() const = 0;
 
+		virtual size_t getTotalTestsCount() const = 0;
+		virtual size_t getStartedTestsCount() const = 0;
+		virtual size_t getCompletedTestsCount() const = 0;
+		virtual size_t getFailedTestsCount() const = 0;
+		virtual size_t getIgnoredTestsCount() const = 0;
+		virtual size_t getStoppedTestsCount() const = 0;
+
 		constexpr TestClassInterface* self() { return this; };
 		constexpr const TestClassInterface* self() const { return this; };
 	};

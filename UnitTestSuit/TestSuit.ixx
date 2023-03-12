@@ -3,6 +3,7 @@ module;
 #include <format>
 #include <concepts>
 #include <vector>
+#include <algorithm>
 
 export module Testing:TestSuit;
 
@@ -28,7 +29,7 @@ export namespace Testing {
 			}
 		}
 	public:
-		size_t m_errorLinesToPrint = 5;
+		size_t m_errorLinesToPrint = 7;
 
 	private:
 		TestViewInterface* m_view;
@@ -83,7 +84,13 @@ export namespace Testing {
 						if (test->getState() == TestState::Failed || test->getState() == TestState::Crashed) {
 							m_view->addEntry(ViewLevel::info, std::format("Test \"{}\":\t", test->name()));
 							m_view->indent();
-							m_view->addEntry(ViewLevel::info, test->errorMessage(), true, m_errorLinesToPrint);
+							const std::string errorMessage = test->errorMessage();
+							m_view->addEntry(ViewLevel::info, errorMessage, true, m_errorLinesToPrint);
+							const std::string::difference_type allLines = std::count(errorMessage.begin(), errorMessage.end(), '\n');
+							const auto skippedLines = allLines - m_errorLinesToPrint;
+							if (m_errorLinesToPrint && skippedLines > 0) {
+								m_view->addEntry(ViewLevel::info, std::format("... {} lines skipped ...", skippedLines));
+							}
 							m_view->unindent();
 						}
 					}

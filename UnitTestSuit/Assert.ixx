@@ -14,7 +14,7 @@ import Helpers;
 export namespace Testing {
 
 	template<typename T, typename To>
-	concept CouldBeEqualTo = !std::same_as<T, To>&& std::_Half_equality_comparable<To, T>;
+	concept CouldBeEqualTo = !std::same_as<T, To> && std::_Half_equality_comparable<To, T>;
 
 	template<typename T, typename To>
 	concept CouldNotBeEqualTo = !std::same_as<T, To> && !std::_Half_equality_comparable<To, T>;
@@ -28,14 +28,36 @@ export namespace Testing {
 	template<typename T1, std::equality_comparable_with<T1> T2>
 	struct Equalable<T1, T2> : std::bool_constant<true> {};
 
+	template<typename T, typename To>
+	concept CouldBeComparedTo = std::_Half_ordered<T, To>;
+
+	template<typename T>
+	concept CouldBeCompared = std::_Half_ordered<T, T>;
+
+	template<typename T1, typename T2>
+	struct Comparable : std::bool_constant<false> {};
+
+	template<typename T1, std::_Partially_ordered_with<T1> T2>
+	struct Comparable<T1, T2> : std::bool_constant<true> {};
 }
 
 export namespace Testing {
 	class AssertException : public BaseException {
 		typedef BaseException inherited;
+	private:
+		std::string m_message;
+
 	public:
+		AssertException(const std::string& message) : m_message(message) {}
+		AssertException(const std::exception& caused, const std::string& message) : inherited(caused), m_message(message) {}
+
+	public:
+		[[nodiscard]] virtual std::string message() const {
+			return m_message;
+		}
+
 		[[nodiscard]] virtual std::string reason() const {
-			return std::format("{}", std::to_string(inherited::where()));
+			return std::format("{}{}{}{}", (m_message.size() ? "*> Message:\t" : ""), m_message, (m_message.size() ? "\n" : ""), std::to_string(inherited::where<2>()));
 		}
 
 		[[nodiscard]] virtual char const* what() const {
@@ -46,6 +68,7 @@ export namespace Testing {
 	export class AssertFailedException : public AssertException {
 		typedef AssertException inherited;
 	public:
+		AssertFailedException(std::string message = {}) : inherited(message) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
 			return std::format("AssertFailedException\n{}", inherited::reason());
@@ -60,7 +83,7 @@ export namespace Testing {
 		T1 expected;
 		T2 actual;
 	public:
-		AssertEqualsException(T1 expected, T2 actual) : expected(expected), actual(actual) {}
+		AssertEqualsException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
 			return std::format("AssertEqualsException: expected to be {} but was {}\n{}", expected, actual, inherited::reason());
@@ -72,7 +95,7 @@ export namespace Testing {
 	class AssertSameException : public AssertException {
 		typedef AssertException inherited;
 	public:
-		AssertSameException() {}
+		AssertSameException(std::string message = {}) : inherited(message) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
 			return std::format("AssertSameException: expected {} to be same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
@@ -87,8 +110,8 @@ export namespace Testing {
 		T* expected;
 		T* actual;
 	public:
-		AssertSameException() : AssertSameException(nullptr, nullptr) {}
-		AssertSameException(T* expected, T* actual) : expected(expected), actual(actual) {}
+		AssertSameException(std::string message = {}) : AssertSameException(nullptr, nullptr, message) {}
+		AssertSameException(T* expected, T* actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
 			if (expected && actual) {
@@ -107,7 +130,7 @@ export namespace Testing {
 	class AssertNotSameException : public AssertException {
 		typedef AssertException inherited;
 	public:
-		AssertNotSameException() {}
+		AssertNotSameException(std::string message = {}) : inherited(message) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
 			return std::format("AssertNotSameException: expected {} to be same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
@@ -122,8 +145,8 @@ export namespace Testing {
 		T* expected;
 		T* actual;
 	public:
-		AssertNotSameException() : AssertNotSameException(nullptr, nullptr) {}
-		AssertNotSameException(T* expected, T* actual) : expected(expected), actual(actual) {}
+		AssertNotSameException(std::string message = {}) : AssertNotSameException(nullptr, nullptr, message) {}
+		AssertNotSameException(T* expected, T* actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
 			if (expected && actual) {
@@ -143,7 +166,7 @@ export namespace Testing {
 		T1 expected;
 		T2 actual;
 	public:
-		AssertNotEqualsException(T1 expected, T2 actual) : expected(expected), actual(actual) {}
+		AssertNotEqualsException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
 			return std::format("AssertNotEqualsException: expected not to be {} but was {}\n{}", expected, actual, inherited::reason());
@@ -151,9 +174,72 @@ export namespace Testing {
 	};
 
 	export
+		template<typename T1, typename T2>
+	class AssertLessException : public AssertException {
+		typedef AssertException inherited;
+	private:
+		T1 expected;
+		T2 actual;
+	public:
+		AssertLessException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
+
+		[[nodiscard]] virtual std::string reason() const override {
+			return std::format("AssertLessException: expected actual {} to be less than {}\n{}", actual, expected, inherited::reason());
+		}
+	};
+
+	export
+		template<typename T1, typename T2>
+	class AssertLessOrEqualException : public AssertException {
+		typedef AssertException inherited;
+	private:
+		T1 expected;
+		T2 actual;
+	public:
+		AssertLessOrEqualException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
+
+		[[nodiscard]] virtual std::string reason() const override {
+			return std::format("AssertLessException: expected actual {} to be less or equal to {}\n{}", actual, expected, inherited::reason());
+		}
+	};
+
+	export
+		template<typename T1, typename T2>
+	class AssertGreaterException : public AssertException {
+		typedef AssertException inherited;
+	private:
+		T1 expected;
+		T2 actual;
+	public:
+		AssertGreaterException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
+
+		[[nodiscard]] virtual std::string reason() const override {
+			return std::format("AssertLessException: expected actual {} to be greater than {}\n{}", actual, expected, inherited::reason());
+		}
+	};
+
+	export
+		template<typename T1, typename T2>
+	class AssertGreaterOrEqualException : public AssertException {
+		typedef AssertException inherited;
+	private:
+		T1 expected;
+		T2 actual;
+	public:
+		AssertGreaterOrEqualException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
+
+		[[nodiscard]] virtual std::string reason() const override {
+			return std::format("AssertLessException: expected actual {} to be greater or equal to {}\n{}", actual, expected, inherited::reason());
+		}
+	};
+
+	export
 		template<typename Derived, typename Base>
 	class AssertInheritenceException : public AssertException {
 		typedef AssertException inherited;
+
+	public:
+		AssertInheritenceException(std::string message = {}) : inherited(message) {}
 
 	public:
 		[[nodiscard]] virtual std::string reason() const override {
@@ -168,7 +254,7 @@ export namespace Testing {
 			std::vector<BaseException> m_caused;
 
 		public:
-			AssertOrException(const std::vector<BaseException>& caused) : m_caused(caused) {}
+			AssertOrException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(message), m_caused(caused) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertOrException: all executions failed");
@@ -186,7 +272,7 @@ export namespace Testing {
 			std::vector<BaseException> m_caused;
 
 		public:
-			AssertNorException(const std::vector<BaseException>& caused) : m_caused(caused) {}
+			AssertNorException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(message), m_caused(caused) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertNorException: not all expected exceptions were captured.");
@@ -204,7 +290,7 @@ export namespace Testing {
 			std::vector<BaseException> m_caused;
 
 		public:
-			AssertAndException(const std::vector<BaseException>& caused) : m_caused(caused) {}
+			AssertAndException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(message), m_caused(caused) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertAndException: at least one execution failed");
@@ -222,7 +308,7 @@ export namespace Testing {
 			std::vector<BaseException> m_caused;
 
 		public:
-			AssertNandException(const std::vector<BaseException>& caused) : m_caused(caused) {}
+			AssertNandException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(message), m_caused(caused) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertNandException: not all exceptions were captured");
@@ -237,184 +323,220 @@ export namespace Testing {
 export namespace Testing {
 	export class Assert {
 	public:
-		static void Fail() { throw AssertFailedException(); }
-		static void Skip() { throw IgnoredException(); }
+		static void Fail(std::string message = {}) { throw AssertFailedException(message); }
+		static void Skip(std::string message = {}) { throw IgnoredException(message); }
 
 		template<typename T>
-		static void notZero(T actual) noexcept(false) {
+		static void notZero(T actual, std::string message = {}) noexcept(false) {
 			T example{};
 			std::memset(&example, 0, sizeof(T));
-			notEquals<T>(example, actual);
+			notEquals<T>(example, actual, message);
 		}
 
 		template<typename T>
-		static void isZero(T actual) noexcept(false) {
+		static void isZero(T actual, std::string message = {}) noexcept(false) {
 			T example{};
 			std::memset(&example, 0, sizeof(T));
-			equals<T>(example, actual);
+			equals<T>(example, actual, message);
 		}
 
 		template<typename T>
-		static void notNullptr(T* actual) noexcept(false) {
-			notEquals<T>((T)nullptr, actual);
+		static void notNullptr(T* actual, std::string message = {}) noexcept(false) {
+			notEquals<T>((T)nullptr, actual, message);
 		}
 
 		template<typename T>
-		static void isNullptr(T* actual) noexcept(false) {
-			equals<T>((T)nullptr, actual);
+		static void isNullptr(T* actual, std::string message = {}) noexcept(false) {
+			equals<T>((T)nullptr, actual, message);
 		}
 		
 		template<typename Base, typename Actual>
-		static void derivedFrom(Actual) noexcept(false) {
+		static void derivedFrom(Actual, std::string message = {}) noexcept(false) {
 			if (!std::is_base_of_v<Base, Actual>) {
-				throw AssertInheritenceException<Actual, Base>();
+				throw AssertInheritenceException<Actual, Base>(message);
 			}
 		}
 
 		template<typename Example, typename T>
-		static void same(T) noexcept(false) {
+		static void same(T, std::string message = {}) noexcept(false) {
 			if constexpr (!std::is_same_v<Example, T>) {
-				throw AssertSameException<T, Example>{};
+				throw AssertSameException<T, Example>(message);
 			}
 		}
 
 		template<typename T>
-		static void same(T* actual, T* expected) noexcept(false) {
+		static void same(T* actual, T* expected, std::string message = {}) noexcept(false) {
 			if (static_cast<void*>(actual) != static_cast<void*>(expected)) {	//TODO: is it work properly?
-				throw AssertSameException(actual, expected);
+				throw AssertSameException(actual, expected, message);
 			}
 		}
 
 		template<typename Example, typename Actual>
-		static void notSame(Actual) noexcept(false) {
+		static void notSame(Actual, std::string message = {}) noexcept(false) {
 			if constexpr (std::is_same_v<Example, Actual>) {
-				throw AssertNotSameException<Actual, Example>{};
+				throw AssertNotSameException<Actual, Example>(message);
 			}
 		}
 
 		template<typename T>
-		static void notSame(T* actual, T* expected) noexcept(false) {
+		static void notSame(T* actual, T* expected, std::string message = {}) noexcept(false) {
 			if (static_cast<void*>(actual) == static_cast<void*>(expected)) {	//TODO: is it work properly?
-				throw AssertNotSameException(actual, expected);
+				throw AssertNotSameException(actual, expected, message);
 			}
 		}
 
 	// ************************************************ Equals ***************************************************
 		template<typename T1, CouldBeEqualTo<T1> T2>
-		static void equals(T1 actual, T2 expected) noexcept(false) {
+		static void equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
 			if (actual != expected) {
-				throw AssertEqualsException(actual, expected);
+				throw AssertEqualsException(actual, expected, message);
 			}
 		}
 
 		template<typename T1, CouldNotBeEqualTo<T1> T2>
-		static void equals(T1 actual, T2 expected) noexcept(false) {
-			return ::equals<T2, T1>(expected, actual);
+		static void equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			return ::equals<T2, T1>(expected, actual, message);
 		}
 
 		template<typename T1, typename T2>
-		static auto equals(T1 actual, T2 expected) noexcept(false) -> std::enable_if_t<!Equalable<T1, T2>::value, void> {
+		static auto equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) -> std::enable_if_t<!Equalable<T1, T2>::value, void> {
 			if constexpr (sizeof(T1) == sizeof(T2)) {
 				constexpr size_t sizeofT = sizeof(T1);
 				if (!std::memcmp((void*)&actual, (void*)&expected, sizeofT)) {
-					throw AssertEqualsException(actual, expected);
+					throw AssertEqualsException(actual, expected, message);
 				}
 			} else {
-				throw AssertEqualsException(actual, expected);
+				throw AssertEqualsException(actual, expected, message);
 			}
 		}
 
 		template<typename T1, typename T2>
-		static auto equals(T1* actual, T2* expected) noexcept(false) -> std::enable_if_t<Equalable<std::remove_pointer_t<T1>, std::remove_pointer_t<T2>>::value, void> {
-			if constexpr (sizeof(T1) == sizeof(T2)) {
-				if (actual == expected) {
-					//early exit if same
-					return;
-				}
-				constexpr size_t sizeofT = sizeof(T1);
-				if (!std::memcmp((void*)actual, (void*)expected, sizeofT)) {
-					throw AssertEqualsException(actual, expected);
-				}
-			} else {
-				throw AssertEqualsException(actual, expected);
+		static auto equals(T1* actual, T2* expected, std::string message = {}) noexcept(false) -> std::enable_if_t<Equalable<std::remove_pointer_t<T1>, std::remove_pointer_t<T2>>::value, void> {
+			if (actual == expected) {
+				return;
 			}
+			throw AssertEqualsException(actual, expected, message);
 		}
 
 		template<std::equality_comparable T>
-		static void equals(T actual, T expected) noexcept(false) {
-			if (actual != expected) {
-				throw AssertEqualsException(actual, expected);
+		static void equals(T actual, T expected, std::string message = {}) noexcept(false) {
+			if (actual == expected) {
+				return;
 			}
+			throw AssertEqualsException(actual, expected, message);
 		}
 
 		template<typename T>
-		static void equals(T actual, T expected) noexcept(false) {
+		static void equals(T actual, T expected, std::string message = {}) noexcept(false) {
 			constexpr size_t sizeofT = sizeof(T);
 			if (!std::memcmp((void*)&actual, (void*)&expected, sizeofT)) {
-				throw AssertEqualsException(actual, expected);
+				throw AssertEqualsException(actual, expected, message);
 			}
 		}
 
 	// ************************************************ Not equals ***************************************************
 		template<typename T1, CouldBeEqualTo<T1> T2>
-		static void notEquals(T1 actual, T2 expected) noexcept(false) {
+		static void notEquals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
 			if (actual == expected) {
-				throw AssertNotEqualsException(actual, expected);
+				throw AssertNotEqualsException(actual, expected, message);
 			}
 		}
 
 		template<typename T1, CouldNotBeEqualTo<T1> T2>
-		static void notEquals(T1 actual, T2 expected) noexcept(false) {
-			return ::notEquals<T2, T1>(expected, actual);
+		static void notEquals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			return ::notEquals<T2, T1>(expected, actual, message);
 		}
 
 		template<typename T1, typename T2>
-		static auto notEquals(T1 actual, T2 expected) noexcept(false) -> std::enable_if_t<!Equalable<T1, T2>::value, void> {
+		static auto notEquals(T1 actual, T2 expected, std::string message = {}) noexcept(false) -> std::enable_if_t<!Equalable<T1, T2>::value, void> {
 			if constexpr (sizeof(T1) == sizeof(T2)) {
 				constexpr size_t sizeofT = sizeof(T1);
 				if (std::memcmp((void*)&actual, (void*)&expected, sizeofT)) {
-					throw AssertNotEqualsException(actual, expected);
+					throw AssertNotEqualsException(actual, expected, message);
 				}
 			}
 			//if sizeof not match they are definitely not equals
 		}
 
 		template<typename T1, typename T2>
-		static auto notEquals(T1* actual, T2* expected) noexcept(false) -> std::enable_if_t<Equalable<std::remove_pointer_t<T1>, std::remove_pointer_t<T2>>::value, void> {
-			if constexpr (sizeof(T1) == sizeof(T2)) {
-				if (actual != expected) {
-					//early exit if not same
-					return;
-				}
-				constexpr size_t sizeofT = sizeof(T1);
-				if (std::memcmp((void*)actual, (void*)expected, sizeofT)) {
-					throw AssertNotEqualsException(actual, expected);
-				}
+		static auto notEquals(T1* actual, T2* expected, std::string message = {}) noexcept(false) -> std::enable_if_t<Equalable<std::remove_pointer_t<T1>, std::remove_pointer_t<T2>>::value, void> {
+			if (actual != expected) {
+				//early exit if not same
+				return;
 			}
-			//if sizeof not match they are definitely not equals
+			throw AssertNotEqualsException(actual, expected, message);
 		}
 
 		template<std::equality_comparable T>
-		static void notEquals(T actual, T expected) noexcept(false) {
+		static void notEquals(T actual, T expected, std::string message = {}) noexcept(false) {
 			if (actual == expected) {
-				throw AssertNotEqualsException(actual, expected);
+				throw AssertNotEqualsException(actual, expected, message);
 			}
 		}
 
 		template<typename T>
-		static void notEquals(T actual, T expected) noexcept(false) {
+		static void notEquals(T actual, T expected, std::string message = {}) noexcept(false) {
 			constexpr size_t sizeofT = sizeof(T);
 			if (std::memcmp((void*)&actual, (void*)&expected, sizeofT)) {
-				throw AssertNotEqualsException(actual, expected);
+				throw AssertNotEqualsException(actual, expected, message);
 			}
 		}
 
-		//TODO
+		template<CouldBeCompared T>
+		static void less(T actual, T expected, std::string message = {}) noexcept(false) {
+			if (!(actual < expected)) {
+				throw AssertLessException(actual, expected, message);
+			}
+		}
 
-		// Less
-		// Greater
-		// LessOrEqual
-		// GreaterOrEqual
+		template<typename T, CouldBeComparedTo<T> To>
+		static void less(T actual, To expected, std::string message = {}) noexcept(false) {
+			if (!(actual < expected)) {
+				throw AssertLessException(actual, expected, message);
+			}
+		}
+
+		template<CouldBeCompared T>
+		static void lessOrEqual (T actual, T expected, std::string message = {}) noexcept(false) {
+			if (!(actual <= expected)) {
+				throw AssertLessOrEqualException(actual, expected, message);
+			}
+		}
+
+		template<typename T, CouldBeComparedTo<T> To>
+		static void lessOrEqual(T actual, To expected, std::string message = {}) noexcept(false) {
+			if (!(actual <= expected)) {
+				throw AssertLessOrEqualException(actual, expected, message);
+			}
+		}
+
+		template<CouldBeCompared T>
+		static void greater(T actual, T expected, std::string message = {}) noexcept(false) {
+			if (!(actual > expected)) {
+				throw AssertGreaterException(actual, expected, message);
+			}
+		}
+
+		template<typename T, CouldBeComparedTo<T> To>
+		static void greater(T actual, To expected, std::string message = {}) noexcept(false) {
+			if (!(actual > expected)) {
+				throw AssertGreaterException(actual, expected, message);
+			}
+		}
+
+		template<CouldBeCompared T>
+		static void greaterOrEqual(T actual, T expected, std::string message = {}) noexcept(false) {
+			if (!(actual >= expected)) {
+				throw AssertGreaterOrEqualException(actual, expected, message);
+			}
+		}
+
+		template<typename T, CouldBeComparedTo<T> To>
+		static void greaterOrEqual(T actual, To expected, std::string message = {}) noexcept(false) {
+			if (!(actual >= expected)) {
+				throw AssertGreaterOrEqualException(actual, expected, message);
+			}
+		}
 
 	public:
 		/*

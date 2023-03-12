@@ -33,18 +33,12 @@ export namespace Testing {
 
 	export class TestException : public BaseException {
 		typedef BaseException inherited;
-	private:
-		std::string m_errorMessage;
 
 	public:
-		TestException(const std::string& what) : inherited(what.c_str()), m_errorMessage(what) {}
+		TestException(const std::string& what) : inherited(what.c_str()) {}
 
 		[[nodiscard]] virtual std::string reason() const {
-			return m_errorMessage;
-		}
-
-		[[nodiscard]] virtual char const* what() const override {
-			return m_errorMessage.c_str();
+			return std::string(inherited::what());
 		}
 	};
 
@@ -66,13 +60,13 @@ export namespace Testing {
 		typedef BaseException inherited;
 	private:
 		std::vector<BaseException> m_caused;
-
+		std::string m_message;
 	public:
-		IgnoredException() : m_caused() {}
-		IgnoredException(const std::vector<BaseException>& caused) : m_caused(caused) {}
+		IgnoredException(const std::string& message = {}) : m_message(message), m_caused() {}
+		IgnoredException(const std::vector<BaseException>& caused, const std::string& message = {}) : m_message(message), m_caused(caused) {}
 
 		[[nodiscard]] virtual std::string reason() const {
-			std::string result = std::format("\nIgnoredException{}", m_caused.empty() ? ": Execution skipped!" : ":");
+			std::string result = std::format("\n{}{}{}IgnoredException{}", m_message.size() ? "Message:\t" : "" , m_message, m_message.size() ? "\n" : "", m_caused.empty() ? ": Execution skipped!" : ":");
 			for (BaseException e : m_caused) {
 				result.append(std::format("\nCaused by: {}", e.reason()));
 			}
@@ -94,9 +88,16 @@ export namespace Testing {
 
 	public:
 		TestStopException() : inherited("Test execution was stopped by user.") {}
+		TestStopException(char const* what) : inherited(what) {}
+		TestStopException(std::string message) : inherited(message) {}
 
 		[[nodiscard]] virtual std::string reason() const {
-			return std::format("TestStopException: {}", inherited::what());
+			const char* message = inherited::what();
+			if (message) {
+				return std::format("TestStopException: {}", inherited::what());
+			} else {
+				return std::string("TestStopException");
+			}
 		}
 
 		[[nodiscard]] virtual std::stacktrace where() const {
@@ -106,12 +107,20 @@ export namespace Testing {
 
 	export
 	struct Test {
-		static void ignore() noexcept(false) {
-			throw IgnoredException();
+		static void ignore(std::string reason = {}) noexcept(false) {
+			throw IgnoredException(reason);
 		}
 
 		static void stop() noexcept(false) {
 			throw TestStopException();
+		}
+
+		static void stop(const char* reason) noexcept(false) {
+			throw TestStopException(reason);
+		}
+
+		static void stop(std::string reason) noexcept(false) {
+			throw TestStopException(reason);
 		}
 	};
 }

@@ -44,7 +44,7 @@ namespace Testing {
 			this->addTest("SampleStaticTest", &MyTestClass<Type>::SampleTestStatic);
 
 			this->addTest("FailTest", [](TestContext& ctx) -> void {
-				Assert::Fail();
+				Assert::Fail("Test should fail!");
 			});
 
 			this->addTest("StopTest", [](TestContext& ctx) -> void {

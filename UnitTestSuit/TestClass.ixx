@@ -72,6 +72,13 @@ export namespace Testing {
 			}
 		}
 		virtual TestViewInterface* view() const override { return m_view; }
+	public:
+		virtual size_t getTotalTestsCount() const override { return m_data.totalTestsCount; }
+		virtual size_t getStartedTestsCount() const override { return m_data.startedTestsCount; }
+		virtual size_t getCompletedTestsCount() const override { return m_data.succeededTestsCount; }
+		virtual size_t getFailedTestsCount() const override { return m_data.failedTestsCount; }
+		virtual size_t getIgnoredTestsCount() const override { return m_data.stoppedTestsCount; }
+		virtual size_t getStoppedTestsCount() const override { return m_data.ignoredTestsCount; }
 
 	private:
 		virtual void onTestStart(const UnitTestInterface* test, TestContextInterface* ctx) override {
@@ -129,6 +136,7 @@ export namespace Testing {
 				case Stopped:
 					m_data.startedTestsCount++;
 					m_data.stoppedTestsCount++;
+					m_data.succeededTestsCount++;
 					break;
 				case Ignored:
 					m_data.startedTestsCount++;
@@ -180,6 +188,7 @@ export namespace Testing {
 			m_view->addEntry(ViewLevel::info, std::format("Completed tests: {}/{}", m_data.succeededTestsCount, m_data.totalTestsCount));
 			m_view->addEntry(ViewLevel::info, std::format("Failed tests: {}/{}", m_data.failedTestsCount, m_data.totalTestsCount));
 			m_view->addEntry(ViewLevel::info, std::format("Ignored tests: {}/{}", m_data.ignoredTestsCount, m_data.totalTestsCount));
+			m_view->addEntry(ViewLevel::info, std::format("Stopped tests: {}", m_data.stoppedTestsCount, m_data.totalTestsCount));
 			m_view->unindent();
 			m_view->addEntry(ViewLevel::info, std::format("==========================================================="));
 			m_view->print();
