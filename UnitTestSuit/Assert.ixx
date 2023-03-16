@@ -367,7 +367,7 @@ export namespace Testing {
 		template<typename T>
 		static void same(T* actual, T* expected, std::string message = {}) noexcept(false) {
 			if (static_cast<void*>(actual) != static_cast<void*>(expected)) {	//TODO: is it work properly?
-				throw AssertSameException(actual, expected, message);
+				throw AssertSameException(expected, actual, message);
 			}
 		}
 
@@ -381,7 +381,7 @@ export namespace Testing {
 		template<typename T>
 		static void notSame(T* actual, T* expected, std::string message = {}) noexcept(false) {
 			if (static_cast<void*>(actual) == static_cast<void*>(expected)) {	//TODO: is it work properly?
-				throw AssertNotSameException(actual, expected, message);
+				throw AssertNotSameException(expected, actual, message);
 			}
 		}
 
@@ -389,13 +389,15 @@ export namespace Testing {
 		template<typename T1, CouldBeEqualTo<T1> T2>
 		static void equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
 			if (actual != expected) {
-				throw AssertEqualsException(actual, expected, message);
+				throw AssertEqualsException(expected, actual, message);
 			}
 		}
 
 		template<typename T1, CouldNotBeEqualTo<T1> T2>
 		static void equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
-			return ::equals<T2, T1>(expected, actual, message);
+			if (expected != actual) {
+				throw AssertEqualsException(expected, actual, message);
+			}
 		}
 
 		template<typename T1, typename T2>
@@ -403,10 +405,10 @@ export namespace Testing {
 			if constexpr (sizeof(T1) == sizeof(T2)) {
 				constexpr size_t sizeofT = sizeof(T1);
 				if (!std::memcmp((void*)&actual, (void*)&expected, sizeofT)) {
-					throw AssertEqualsException(actual, expected, message);
+					throw AssertEqualsException(expected, actual, message);
 				}
 			} else {
-				throw AssertEqualsException(actual, expected, message);
+				throw AssertEqualsException(expected, actual, message);
 			}
 		}
 
@@ -415,7 +417,7 @@ export namespace Testing {
 			if (actual == expected) {
 				return;
 			}
-			throw AssertEqualsException(actual, expected, message);
+			throw AssertEqualsException(expected, actual, message);
 		}
 
 		template<std::equality_comparable T>
@@ -423,14 +425,14 @@ export namespace Testing {
 			if (actual == expected) {
 				return;
 			}
-			throw AssertEqualsException(actual, expected, message);
+			throw AssertEqualsException(expected, actual, message);
 		}
 
 		template<typename T>
 		static void equals(T actual, T expected, std::string message = {}) noexcept(false) {
 			constexpr size_t sizeofT = sizeof(T);
 			if (!std::memcmp((void*)&actual, (void*)&expected, sizeofT)) {
-				throw AssertEqualsException(actual, expected, message);
+				throw AssertEqualsException(expected, actual, message);
 			}
 		}
 
@@ -438,13 +440,15 @@ export namespace Testing {
 		template<typename T1, CouldBeEqualTo<T1> T2>
 		static void notEquals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
 			if (actual == expected) {
-				throw AssertNotEqualsException(actual, expected, message);
+				throw AssertNotEqualsException(expected, actual, message);
 			}
 		}
 
 		template<typename T1, CouldNotBeEqualTo<T1> T2>
 		static void notEquals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
-			return ::notEquals<T2, T1>(expected, actual, message);
+			if (expected == actual) {
+				throw AssertNotEqualsException(expected, actual, message);
+			}
 		}
 
 		template<typename T1, typename T2>
@@ -452,7 +456,7 @@ export namespace Testing {
 			if constexpr (sizeof(T1) == sizeof(T2)) {
 				constexpr size_t sizeofT = sizeof(T1);
 				if (std::memcmp((void*)&actual, (void*)&expected, sizeofT)) {
-					throw AssertNotEqualsException(actual, expected, message);
+					throw AssertNotEqualsException(expected, actual, message);
 				}
 			}
 			//if sizeof not match they are definitely not equals
@@ -464,13 +468,13 @@ export namespace Testing {
 				//early exit if not same
 				return;
 			}
-			throw AssertNotEqualsException(actual, expected, message);
+			throw AssertNotEqualsException(expected, actual, message);
 		}
 
 		template<std::equality_comparable T>
 		static void notEquals(T actual, T expected, std::string message = {}) noexcept(false) {
 			if (actual == expected) {
-				throw AssertNotEqualsException(actual, expected, message);
+				throw AssertNotEqualsException(expected, actual, message);
 			}
 		}
 
@@ -478,49 +482,49 @@ export namespace Testing {
 		static void notEquals(T actual, T expected, std::string message = {}) noexcept(false) {
 			constexpr size_t sizeofT = sizeof(T);
 			if (std::memcmp((void*)&actual, (void*)&expected, sizeofT)) {
-				throw AssertNotEqualsException(actual, expected, message);
+				throw AssertNotEqualsException(expected, actual, message);
 			}
 		}
 
 		template<CouldBeCompared T>
 		static void less(T actual, T expected, std::string message = {}) noexcept(false) {
 			if (!(actual < expected)) {
-				throw AssertLessException(actual, expected, message);
+				throw AssertLessException(expected, actual, message);
 			}
 		}
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void less(T actual, To expected, std::string message = {}) noexcept(false) {
 			if (!(actual < expected)) {
-				throw AssertLessException(actual, expected, message);
+				throw AssertLessException(expected, actual, message);
 			}
 		}
 
 		template<CouldBeCompared T>
 		static void lessOrEqual (T actual, T expected, std::string message = {}) noexcept(false) {
 			if (!(actual <= expected)) {
-				throw AssertLessOrEqualException(actual, expected, message);
+				throw AssertLessOrEqualException(expected, actual, message);
 			}
 		}
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void lessOrEqual(T actual, To expected, std::string message = {}) noexcept(false) {
 			if (!(actual <= expected)) {
-				throw AssertLessOrEqualException(actual, expected, message);
+				throw AssertLessOrEqualException(expected, actual, message);
 			}
 		}
 
 		template<CouldBeCompared T>
 		static void greater(T actual, T expected, std::string message = {}) noexcept(false) {
 			if (!(actual > expected)) {
-				throw AssertGreaterException(actual, expected, message);
+				throw AssertGreaterException(expected, actual, message);
 			}
 		}
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void greater(T actual, To expected, std::string message = {}) noexcept(false) {
 			if (!(actual > expected)) {
-				throw AssertGreaterException(actual, expected, message);
+				throw AssertGreaterException(expected, actual, message);
 			}
 		}
 
@@ -534,7 +538,7 @@ export namespace Testing {
 		template<typename T, CouldBeComparedTo<T> To>
 		static void greaterOrEqual(T actual, To expected, std::string message = {}) noexcept(false) {
 			if (!(actual >= expected)) {
-				throw AssertGreaterOrEqualException(actual, expected, message);
+				throw AssertGreaterOrEqualException(expected, actual, message);
 			}
 		}
 

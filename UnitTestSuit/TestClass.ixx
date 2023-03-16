@@ -44,15 +44,21 @@ export namespace Testing {
 	};
 
 	template<typename Self>
-	class TestClassInner : public TestClassInterface {
+		class TestClassInner : public TestClassInterface {
 	private:
 		TestViewInterface* m_view = TestViewConsole::create();
 
-		char const* m_name;
+		std::string m_name;
 		TestData m_data;
 		std::vector<UnitTestInterface*> m_unitTests;
 	public:
-		constexpr TestClassInner(char const* name) : m_name(name) {}
+		constexpr TestClassInner(const char* name) : m_name(name) {}
+		constexpr TestClassInner(const std::string_view& name) : m_name(name) {}
+		constexpr TestClassInner(std::string_view&& name) : m_name(name) {}
+		constexpr TestClassInner(const std::string& name) : m_name(name) {}
+		constexpr TestClassInner(std::string&& name) : m_name(name) {}
+		constexpr TestClassInner(const utils::string_static& name) : m_name(std::to_string(name)) {}
+		constexpr TestClassInner(utils::string_static&& name) : m_name(std::to_string(name)) {}
 
 		constexpr virtual ~TestClassInner() {
 			for (UnitTestInterface* test : m_unitTests) {
@@ -127,7 +133,7 @@ export namespace Testing {
 		}
 
 	public:
-		constexpr virtual char const* name() const { return m_name; }
+		constexpr virtual char const* name() const { return m_name.c_str(); }
 
 		virtual std::vector<UnitTestInterface*>& getAllTests() override { return m_unitTests; }
 
@@ -216,6 +222,12 @@ export namespace Testing {
 		typedef TestClassInner<Self> inherited;
 	public:
 		constexpr TestClass(char const* name) : inherited(name) {}
+		constexpr TestClass(const std::string_view& name) : inherited(name) {}
+		constexpr TestClass(std::string_view&& name) : inherited(name) {}
+		constexpr TestClass(const std::string& name) : inherited(name) {}
+		constexpr TestClass(std::string&& name) : inherited(name) {}
+		constexpr TestClass(const utils::string_static& name) : inherited(name) {}
+		constexpr TestClass(utils::string_static&& name) : inherited(name) {}
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
@@ -249,7 +261,7 @@ export namespace Testing {
 	class TestClassTyped : public TestClassInner<Self<Type>> {
 		typedef TestClassInner<Self<Type>> inherited;
 	public:
-		constexpr TestClassTyped(char const* name) : inherited(name) {}
+		constexpr TestClassTyped(char const* name) : inherited(std::move(utils::concat(name, '<', helper::TypeParse<Type>::name, '>'))) {}
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
@@ -276,23 +288,47 @@ export namespace Testing {
 				BenchmarkUnitTestTyped<Type, Function>::instance(inherited::getAllTests(), name, this, func, iterations);
 			}
 		}
+	};
 
-		constexpr virtual char const* name() const override {
-			char const* name_ptr = inherited::name();
-			char const* type_name_ptr = helper::TypeParse<Type>::name;
-			size_t name_length = utils::length(name_ptr);
-			size_t type_name_length = utils::length(type_name_ptr);
-			std::array<char, 256> result_holder;
-			for (size_t i = 0; i < name_length; ++i) {
-				result_holder[i] = name_ptr[i];
+	export
+		template<template<auto> typename Self, auto t_Arg>
+	class TestClassArgumented : public TestClass<Self<t_Arg>> {
+		typedef TestClass<Self<t_Arg>> inherited;
+	public:
+		constexpr TestClassArgumented(char const* name) : inherited(std::move(utils::concat(name, "<(", helper::TypeParse<decltype(t_Arg)>::name, ')', t_Arg, '>'))) {}
+	};
+
+	export
+		template<template<typename, auto> typename Self, typename Type, auto t_Arg>
+	class TestClassArgumentedTyped : public TestClassInner<Self<Type, t_Arg>> {
+		typedef TestClassInner<Self<Type, t_Arg>> inherited;
+	public:
+		constexpr TestClassArgumentedTyped(char const* name) : inherited(std::move(utils::concat(name, '<', helper::TypeParse<Type>::name, ", (", helper::TypeParse<decltype(t_Arg)>::name, ')', t_Arg, '>'))) {}
+
+		template<typename Function>
+		void addTest(char const* name, Function func) {
+			if constexpr (is_static_function_pointer<Function>::value) {
+				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
+				UnitTestTyped<Type, utils::FunctionStaticWrapper<void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function);
+			} else if constexpr (std::is_member_function_pointer_v<Function>) {
+				utils::FunctionWrapper<Self<Type, t_Arg>, void, TestContextTyped<Type>&> function(static_cast<const Self<Type, t_Arg>*>(this), (void(Self<Type, t_Arg>::*)(TestContextTyped<Type> &))(func));
+				UnitTestTyped<Type, utils::FunctionWrapper<Self<Type, t_Arg>, void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function);
+			} else {
+				UnitTestTyped<Type, Function>::instance(inherited::getAllTests(), name, this, func);
 			}
-			result_holder[name_length] = '<';
-			for (size_t i = 0; i < type_name_length; ++i) {
-				result_holder[name_length + i + 1] = type_name_ptr[i];
+		}
+
+		template<typename Function>
+		void addBenchmarkTest(char const* name, Function func, size_t iterations = 1) {
+			if constexpr (is_static_function_pointer<Function>::value) {
+				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
+				BenchmarkUnitTestTyped<Type, utils::FunctionStaticWrapper<void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function, iterations);
+			} else if constexpr (std::is_member_function_pointer_v<Function>) {
+				utils::FunctionWrapper<Self<Type, t_Arg>, void, TestContextTyped<Type>&> function(static_cast<const Self<Type, t_Arg>*>(this), (void(Self<Type, t_Arg>::*)(TestContextTyped<Type> &))(func));
+				BenchmarkUnitTestTyped<Type, utils::FunctionWrapper<Self<Type, t_Arg>, void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function, iterations);
+			} else {
+				BenchmarkUnitTestTyped<Type, Function>::instance(inherited::getAllTests(), name, this, func, iterations);
 			}
-			result_holder[name_length + type_name_length + 1] = '>';
-			result_holder[name_length + type_name_length + 2] = '\0';
-			return result_holder.data();
 		}
 	};
 }

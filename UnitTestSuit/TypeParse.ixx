@@ -2,9 +2,22 @@ module;
 
 #include <typeinfo>
 
+#define REGISTER_PARSE_TYPE(X)\
+export\
+	template<>\
+constexpr const char* resolveTypeName<X>() {\
+	return #X;\
+}
+
 export module Helpers:TypeParse;
 
 export namespace helper {
+	export
+		template<typename T>
+	constexpr const char* resolveTypeName() {
+		return typeid(T).name();
+	}
+
 	export
 		template <typename T>
 	struct TypeParse {
@@ -12,12 +25,7 @@ export namespace helper {
 	};
 	export
 		template <typename T>
-	const char* TypeParse<T>::name = typeid(T).name();
-
-#define REGISTER_PARSE_TYPE(X)\
-	export\
-		template<>\
-	const char* TypeParse<X>::name = #X;
+	const char* TypeParse<T>::name = resolveTypeName<T>();
 
 	REGISTER_PARSE_TYPE(void);
 	

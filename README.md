@@ -18,7 +18,7 @@ Should be fixed after c++23 standard library module appearance.
 ### Add to project
 
 Use LibUnitTestSuit.dll created by LibUnitTestSuit project.
-Or see [MSDN](https://learn.microsoft.com/en-us/cpp/build/walkthrough-import-stl-header-units?view=msvc-160).
+<br>Or see [MSDN](https://learn.microsoft.com/en-us/cpp/build/walkthrough-import-stl-header-units?view=msvc-160).
 
 ### Creating your own test class
 
@@ -40,9 +40,10 @@ public:
 	// End of tests
 	
 	constexpr virtual void registerTestMethods() override {
+		// Or place your tests here as lambdas
 		...
 	}
-	
+
 };
 ```
 
@@ -59,10 +60,42 @@ public:
 	// End of tests
 	
 	constexpr virtual void registerTestMethods() override {
+		// Or place your tests here as lambdas
 		...
 	}
-	
+
 };
+```
+#### Argumented Test Classes
+For creating test classes with compile time provided values you could use:
+```cplusplus
+template<size_t value>
+class MyArgumentedTestClass : public TestClassArgumented<MyArgumentedTestClass<value>, value> {
+	typedef TestClassArgumented<MyArgumentedTestClass<value>, value> inherited;
+public:
+
+	MyArgumentedTestClass() : inherited("MyArgumentedTestClass") {}
+		
+	// Place your tests here
+	...
+	// End of tests
+	
+	constexpr virtual void registerTestMethods() override {
+		// Or place your tests here as lambdas
+		...
+	}
+
+};
+```
+And typed version:
+```cplusplus
+template<typename Type, size_t value>
+class MyArgumentedTypedTestClass : public TestClassArgumentedTyped<MyArgumentedTypedTestClass<Type, value>, Type, value > {
+	typedef TestClassArgumentedTyped<MyArgumentedTypedTestClass<Type, value>, Type, value> inherited;
+public:
+
+	MyArgumentedTypedTestClass() : inherited("MyArgumentedTypedTestClass") {}
+	... other lines same as previous ...
 ```
 
 ### Create Test
@@ -129,7 +162,13 @@ public:
 	// register single type typed test class
 	suit.registerClass<MyTypedTestClass<uint64_t>>();
 	// register multiple types test class
-	suit.registerMultipleClasses<MyTypedTestClass, uint32_t, uint16_t, uint8_t, float> ();
+	suit.registerMultipleClasses<MyTypedTestClass, uint32_t, uint16_t, uint8_t, float> ();	//will create unique test class for each type provided
+
+	// register fixed type test class with variable arguments values
+	suit.registerArgumentedClass<MyArgumentedTestClass, 0, 1, 2, 3, 4, 5, 6, 7, 8>();	//will create unique test class for each value provided
+	// register typed test class (with type <int>) with variable arguments values
+	suit.registerArgumentedClass<MyArgumentedTypedTestClass, int, 0, 1, 2, 3, 4, 5, 6, 7, 8>();	//will create unique test class for each value provided
+
 	suit.run();
 }
 ```
@@ -193,24 +232,24 @@ class MyTestClass : ...
 TestSuit is global configuration unit for all test classes.
 
 modifiable properties:
-```TestViewInterface* m_view``` only as constructor argument, by default ```TestViewConsole``` is used.
-```m_errorLinesToPrint``` - public member field.
+* ```TestViewInterface* m_view``` only as constructor argument, by default ```TestViewConsole``` is used.
+* ```m_errorLinesToPrint``` - public member field.
 
 ### TestViewInterface
 ```TestViewInterface*``` will be populated for each test class (via cloning original and setting individual clones to test classes) and used to log test events, errors, and other messages.
-i.e. ```ctx.log(std::string("My custom test message"))``` could be used to print custom message using provided ```TestViewInterface*``` realization;
+<br>i.e. ```ctx.log(std::string("My custom test message"))``` could be used to print custom message using provided ```TestViewInterface*``` realization;
 
 
-### TestClass (TestClassTyped)
+### TestClass (TestClassTyped), TestClassArgumented (TestClassArgumentedTyped)
 Holder for individual TestMethods.
-Responsible for creating and clearing of environment;
-running individual tests;
-gathering and providing statistics to ```TestView```.
+<br>Responsible for creating and clearing of environment;
+<br>running individual tests;
+<br>gathering and providing statistics to ```TestView```.
 
 ### UnitTests (UnitTestTyped)
 Wrapper to individual test.
-Responsible for test run. Test event creating, based on exceptions thrown via ```Assert``` or directly.
-Holds ```TestContext``` (or ```TestContexTyped```).
+<br>Responsible for test run. Test event creating, based on exceptions thrown via ```Assert``` or directly.
+<br>Holds ```TestContext``` (or ```TestContexTyped```).
 
 ### TestContext (TestContextTyped)
 Tracks test state and provides API for user.
@@ -234,13 +273,13 @@ Use it for specific functions measuring during test.
 ```
 
 > Result have format params ```{:#iITtAaFfSs}```.
-> if any flag (not including ```#```) is provided, all fields whose flags are not provided will be skipped.
-> ```#``` - will skip field names in output
-> ```i``` or ```I``` - print iterations number
-> ```t``` or ```T``` - print total time spent
-> ```a``` or ```A``` - print average time
-> ```f``` or ```F``` - print fastest time
-> ```s``` or ```S``` - print slowest time
+> if any flag (excluding ```#```) is provided, all fields whose flags are not provided will be skipped.
+> <br>```#``` - will skip field names in output
+> <br>```i``` or ```I``` - print iterations number
+> <br>```t``` or ```T``` - print total time spent
+> <br>```a``` or ```A``` - print average time
+> <br>```f``` or ```F``` - print fastest time
+> <br>```s``` or ```S``` - print slowest time
 
 Or benchmark whole test, just by replacing ```addTest``` with ```addBenchmarkTest```, and optionally specifying number of iterations:
 ```cplusplus
@@ -252,8 +291,8 @@ this->addBenchmarkTest("MyBenchmarkedTest", [](TestContext& ctx) -> void { //Tes
 
 ### Direct Test controls
 
-```Test::stop();``` will stop test execution immediately (by throwing exception), but count test as Completed.
-```Test::ignore();``` will stop test execution immediately (by throwing exception), mark test as Ignored.
+* ```Test::stop();``` will stop test execution immediately (by throwing exception), but count test as Completed.
+* ```Test::ignore();``` will stop test execution immediately (by throwing exception), mark test as Ignored.
 
 ### Expect
 

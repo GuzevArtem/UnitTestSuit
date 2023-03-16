@@ -14,12 +14,16 @@ import :TestClass;
 export namespace Testing {
 
 	template<typename T>
-	concept TestClassType = std::same_as<T, TestClassInterface> || std::is_base_of_v<TestClassInterface, T>;
+	concept TestClassType = !std::same_as<T, TestClassInterface> && std::is_base_of_v<TestClassInterface, T>;
+
+
+	template<typename T, auto... args, template<typename T, auto... args> typename ClassType>
+	concept TestClassTemplateArgumentedType = !std::same_as<ClassType<T, args...>, TestClassInterface>&& std::is_base_of_v<TestClassInterface, ClassType<T, args...>>;
 
 	export
 	class TestSuit {
 	public:
-		constexpr TestSuit(TestViewInterface* view = TestViewConsole::create()) : m_view(view), m_registeredTests(0), m_testClasses() {}
+		constexpr TestSuit(TestViewInterface* view = TestViewConsole::create()) : m_view(view), m_registeredTestClasses(0), m_testClasses() {}
 		constexpr virtual ~TestSuit() {
 			for (TestClassInterface* testClass : m_testClasses) {
 				delete testClass;
@@ -33,7 +37,7 @@ export namespace Testing {
 
 	private:
 		TestViewInterface* m_view;
-		size_t m_registeredTests;
+		size_t m_registeredTestClasses;
 		std::vector<TestClassInterface*> m_testClasses;
 
 	public:
@@ -117,15 +121,32 @@ export namespace Testing {
 			}
 			cls->registerTestMethods();
 			m_testClasses.emplace_back(static_cast<TestClassInterface*>(cls->self()));
-			m_registeredTests++;
+			m_registeredTestClasses++;
 		}
 
-		template<template <typename T> typename TemplatedTestClass, typename ClassType, typename... ClassTypes>
+		template<template <typename> typename TemplatedTestClass, typename ClassType, typename... ClassTypes>
 		void registerMultipleClasses() {
 			registerClass<TemplatedTestClass<ClassType>>();
 			if constexpr (sizeof...(ClassTypes)) {
 				registerMultipleClasses<TemplatedTestClass, ClassTypes...>();
 			}
 		}
+
+		template<template <auto> typename ArgumentedTestClass, auto arg, auto... args>
+		void registerArgumentedClass() {
+			registerClass<ArgumentedTestClass<arg>>();
+			if constexpr (sizeof...(args)) {
+				registerArgumentedClass<ArgumentedTestClass, args...>();
+			}
+		}
+
+		template<template <typename, auto> typename ArgumentedTemplatedTestClass, typename ClassType, auto arg, auto... args>
+		void registerArgumentedClass() {
+			registerClass<ArgumentedTemplatedTestClass<ClassType, arg>>();
+			if constexpr (sizeof...(args)) {
+				registerArgumentedClass<ArgumentedTemplatedTestClass, ClassType, args...>();
+			}
+		}
+
 	};
 }

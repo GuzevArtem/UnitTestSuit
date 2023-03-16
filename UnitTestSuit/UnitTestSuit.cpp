@@ -142,11 +142,42 @@ namespace Testing {
 			}, 5);
 		}
 	};
+
+
+	template<size_t value>
+	class MyArgumentedTestClass : public TestClassArgumented<MyArgumentedTestClass<value>, value> {
+		typedef TestClassArgumented<MyArgumentedTestClass<value>, value> inherited;
+	public:
+
+		MyArgumentedTestClass() : inherited("MyArgumentedTestClass") {}
+
+		constexpr virtual void registerTestMethods() override {
+			this->addTest("ArgumentTest", [](TestContext& ctx) -> void {
+				Assert::same<size_t>(value);
+			});
+		}
+	};
+
+	template<typename Type, size_t value>
+	class MyArgumentedTypedTestClass : public TestClassArgumentedTyped<MyArgumentedTypedTestClass<Type, value>, Type, value > {
+		typedef TestClassArgumentedTyped<MyArgumentedTypedTestClass<Type, value>, Type, value> inherited;
+	public:
+
+		MyArgumentedTypedTestClass() : inherited("MyArgumentedTypedTestClass") {}
+
+		constexpr virtual void registerTestMethods() override {
+			this->addTest("ArgumentTypedTest", [](TestContext& ctx) -> void {
+				Assert::same<size_t>(value);
+			});
+		}
+	};
 }
 
 int main() {
 	Testing::TestSuit suit;
 	suit.registerClass<Testing::MyTestClass<uint64_t>>();
 	suit.registerMultipleClasses<Testing::MyTestClass, uint32_t, uint16_t, uint8_t, float> ();
+	suit.registerArgumentedClass<Testing::MyArgumentedTestClass, 0, 1, 2, 3, 4, 5, 6, 7, 8>();
+	suit.registerArgumentedClass<Testing::MyArgumentedTypedTestClass, int, 0, 1, 2, 3, 4, 5, 6, 7, 8>();
 	suit.run();
 }
