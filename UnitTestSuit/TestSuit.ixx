@@ -43,6 +43,13 @@ export namespace Testing {
 	public:
 		void run() {
 			size_t finishedClassCount = 0;
+
+			size_t totalTestsCount = 0;
+			size_t succeededTestsCount = 0;
+			size_t failedTestsCount = 0;
+			size_t ignoredTestsCount = 0;
+			size_t stoppedTestsCount = 0;
+
 			for (TestClassInterface* cls : m_testClasses) {
 				if (!cls) {
 					throw "TestSuit::run() Trying to run (null) as TestClass!";
@@ -70,38 +77,54 @@ export namespace Testing {
 				}
 				m_view->print();
 				++finishedClassCount;
+				totalTestsCount += cls->getTotalTestsCount();
+				succeededTestsCount += cls->getCompletedTestsCount();
+				failedTestsCount += cls->getFailedTestsCount();
+				ignoredTestsCount += cls->getIgnoredTestsCount();
+				stoppedTestsCount += cls->getStoppedTestsCount();
 			}
+
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format("__________________ TEST RUN COMPLETED _____________________"));
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format(""));
 			m_view->addEntry(ViewLevel::info, std::format("Finished tests execution for {}/{} classes.", finishedClassCount, m_testClasses.size()));
+			m_view->indent();
+			m_view->addEntry(ViewLevel::info, std::format("Total completed tests count: {}/{}", succeededTestsCount, totalTestsCount));
+			m_view->addEntry(ViewLevel::info, std::format("Total failed tests count:    {}/{}", failedTestsCount, totalTestsCount));
+			m_view->addEntry(ViewLevel::info, std::format("Total ignored tests count:   {}/{}", ignoredTestsCount, totalTestsCount));
+			m_view->addEntry(ViewLevel::info, std::format("Total stopped tests count:   {}", stoppedTestsCount, totalTestsCount));
+			m_view->unindent();
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format(""));
 			m_view->print();
 
 			for (TestClassInterface* cls : m_testClasses) {
 				if (cls->countTestFailed() > 0) {
-					m_view->addEntry(ViewLevel::info, std::format("Class \"{}\" has {} failed tests:", cls->name(), cls->countTestFailed()));
-					m_view->indent();
-					for (auto test : cls->getAllTests()) {
-						if (test->getState() == TestState::Failed || test->getState() == TestState::Crashed) {
-							m_view->addEntry(ViewLevel::info, std::format("Test \"{}\":\t", test->name()));
-							m_view->indent();
-							const std::string errorMessage = test->errorMessage();
-							m_view->addEntry(ViewLevel::info, errorMessage, true, m_errorLinesToPrint);
-							const std::string::difference_type allLines = std::count(errorMessage.begin(), errorMessage.end(), '\n');
-							const auto skippedLines = allLines - m_errorLinesToPrint;
-							if (m_errorLinesToPrint && skippedLines > 0) {
-								m_view->addEntry(ViewLevel::info, std::format("... {} lines skipped ...", skippedLines));
-							}
-							m_view->unindent();
-						}
-					}
-					m_view->unindent();
-					m_view->print();
+					forEachFailedTestOf(cls);
 				}
 			}
+		}
+
+		virtual void forEachFailedTestOf(TestClassInterface* cls) {
+			m_view->addEntry(ViewLevel::info, std::format("Class \"{}\" has {} failed tests:", cls->name(), cls->countTestFailed()));
+			m_view->indent();
+			for (auto test : cls->getAllTests()) {
+				if (test->getState() == TestState::Failed || test->getState() == TestState::Crashed) {
+					m_view->addEntry(ViewLevel::info, std::format("Test \"{}\":\t", test->name()));
+					m_view->indent();
+					const std::string errorMessage = test->errorMessage();
+					m_view->addEntry(ViewLevel::info, errorMessage, true, m_errorLinesToPrint);
+					const std::string::difference_type allLines = std::count(errorMessage.begin(), errorMessage.end(), '\n');
+					const auto skippedLines = allLines - m_errorLinesToPrint;
+					if (m_errorLinesToPrint && skippedLines > 0) {
+						m_view->addEntry(ViewLevel::info, std::format("... {} lines skipped ...", skippedLines));
+					}
+					m_view->unindent();
+				}
+			}
+			m_view->unindent();
+			m_view->print();
 		}
 
 		/*

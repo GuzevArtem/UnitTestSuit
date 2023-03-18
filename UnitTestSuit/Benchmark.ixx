@@ -14,7 +14,7 @@ export namespace Testing {
 
 #pragma optimize("", on)
 
-	struct compiler_must_not_elide_fn {
+	export struct compiler_must_not_elide_fn {
 		template <typename T>
 		void operator()(T const& t) const noexcept {
 			compiler_must_force_sink(&t);
@@ -25,8 +25,6 @@ export namespace Testing {
 			compiler_must_force_sink(&t);
 		}
 	};
-
-	constexpr compiler_must_not_elide_fn compiler_must_not_elide{};
 
 	export class Benchmark {
 	public:
@@ -75,6 +73,7 @@ export namespace Testing {
 	public:
 		template <class T>
 		static void doNotOptimizeAway(const T& datum) {
+			constexpr compiler_must_not_elide_fn compiler_must_not_elide{};
 			compiler_must_not_elide(datum);
 		}
 	};

@@ -78,13 +78,24 @@ export namespace Testing {
 			}
 		}
 		virtual TestViewInterface* view() const override { return m_view; }
+
+		constexpr virtual bool testExists(char const* name) override {
+			for (auto* test : getAllTests()) {
+				if (utils::str_equal(name, test->name())) {
+					m_view->addEntry(ViewLevel::error, std::format("Already exists! Registering test [{}] for TestClass [{}].", name, this->name()));
+					return true;
+				}
+			}
+			return false;
+		}
+
 	public:
 		virtual size_t getTotalTestsCount() const override { return m_data.totalTestsCount; }
 		virtual size_t getStartedTestsCount() const override { return m_data.startedTestsCount; }
 		virtual size_t getCompletedTestsCount() const override { return m_data.succeededTestsCount; }
 		virtual size_t getFailedTestsCount() const override { return m_data.failedTestsCount; }
-		virtual size_t getIgnoredTestsCount() const override { return m_data.stoppedTestsCount; }
-		virtual size_t getStoppedTestsCount() const override { return m_data.ignoredTestsCount; }
+		virtual size_t getIgnoredTestsCount() const override { return m_data.ignoredTestsCount; }
+		virtual size_t getStoppedTestsCount() const override { return m_data.stoppedTestsCount; }
 
 	private:
 		virtual void onTestStart(const UnitTestInterface* test, TestContextInterface* ctx) override {
@@ -231,6 +242,8 @@ export namespace Testing {
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
+			inherited::testExists(name);
+
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContext&> function((void(*)(TestContext&))(func));
 				UnitTest<utils::FunctionStaticWrapper<void, TestContext&>>::instance(inherited::getAllTests(), name, this, function);
@@ -244,6 +257,8 @@ export namespace Testing {
 
 		template<typename Function>
 		void addBenchmarkTest(char const* name, Function func, size_t iterations = 1) {
+			inherited::testExists(name);
+
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContext&> function((void(*)(TestContext&))(func));
 				BenchmarkUnitTest<utils::FunctionStaticWrapper<void, TestContext&>>::instance(inherited::getAllTests(), name, this, function, iterations);
@@ -262,9 +277,17 @@ export namespace Testing {
 		typedef TestClassInner<Self<Type>> inherited;
 	public:
 		constexpr TestClassTyped(char const* name) : inherited(std::move(utils::concat(name, '<', helper::TypeParse<Type>::name, '>'))) {}
+		constexpr TestClassTyped(const std::string_view& name) : TestClassTyped(name.data()) {}
+		constexpr TestClassTyped(std::string_view&& name) : TestClassTyped(name.data()) {}
+		constexpr TestClassTyped(const std::string& name) : TestClassTyped(name.data()) {}
+		constexpr TestClassTyped(std::string&& name) : TestClassTyped(name.data()) {}
+		constexpr TestClassTyped(const utils::string_static& name) : TestClassTyped(name.data()) {}
+		constexpr TestClassTyped(utils::string_static&& name) : TestClassTyped(name.data()) {}
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
+			inherited::testExists(name);
+
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
 				UnitTestTyped<Type, utils::FunctionStaticWrapper<void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function);
@@ -278,6 +301,8 @@ export namespace Testing {
 
 		template<typename Function>
 		void addBenchmarkTest(char const* name, Function func, size_t iterations = 1) {
+			inherited::testExists(name);
+
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
 				BenchmarkUnitTestTyped<Type, utils::FunctionStaticWrapper<void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function, iterations);
@@ -296,6 +321,12 @@ export namespace Testing {
 		typedef TestClass<Self<t_Arg>> inherited;
 	public:
 		constexpr TestClassArgumented(char const* name) : inherited(std::move(utils::concat(name, "<(", helper::TypeParse<decltype(t_Arg)>::name, ')', t_Arg, '>'))) {}
+		constexpr TestClassArgumented(const std::string_view& name) : TestClassArgumented(name.data()) {}
+		constexpr TestClassArgumented(std::string_view&& name) : TestClassArgumented(name.data()) {}
+		constexpr TestClassArgumented(const std::string& name) : TestClassArgumented(name.data()) {}
+		constexpr TestClassArgumented(std::string&& name) : TestClassArgumented(name.data()) {}
+		constexpr TestClassArgumented(const utils::string_static& name) : TestClassArgumented(name.data()) {}
+		constexpr TestClassArgumented(utils::string_static&& name) : TestClassArgumented(name.data()) {}
 	};
 
 	export
@@ -304,9 +335,17 @@ export namespace Testing {
 		typedef TestClassInner<Self<Type, t_Arg>> inherited;
 	public:
 		constexpr TestClassArgumentedTyped(char const* name) : inherited(std::move(utils::concat(name, '<', helper::TypeParse<Type>::name, ", (", helper::TypeParse<decltype(t_Arg)>::name, ')', t_Arg, '>'))) {}
+		constexpr TestClassArgumentedTyped(const std::string_view& name) : TestClassArgumentedTyped(name.data()) {}
+		constexpr TestClassArgumentedTyped(std::string_view&& name) : TestClassArgumentedTyped(name.data()) {}
+		constexpr TestClassArgumentedTyped(const std::string& name) : TestClassArgumentedTyped(name.data()) {}
+		constexpr TestClassArgumentedTyped(std::string&& name) : TestClassArgumentedTyped(name.data()) {}
+		constexpr TestClassArgumentedTyped(const utils::string_static& name) : TestClassArgumentedTyped(name.data()) {}
+		constexpr TestClassArgumentedTyped(utils::string_static&& name) : TestClassArgumentedTyped(name.data()) {}
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
+			inherited::testExists(name);
+
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
 				UnitTestTyped<Type, utils::FunctionStaticWrapper<void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function);
@@ -320,6 +359,8 @@ export namespace Testing {
 
 		template<typename Function>
 		void addBenchmarkTest(char const* name, Function func, size_t iterations = 1) {
+			inherited::testExists(name);
+
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
 				BenchmarkUnitTestTyped<Type, utils::FunctionStaticWrapper<void, TestContextTyped<Type>&>>::instance(inherited::getAllTests(), name, this, function, iterations);

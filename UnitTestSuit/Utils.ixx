@@ -13,8 +13,14 @@ export import :FunctionWrapper;
 import Helpers;
 
 export namespace utils {
-	constexpr int length(const char* str) {
-		return (str && *str) ? 1 + length(str + 1) : 0;
+	constexpr int str_length(const char* str) {
+		return (str && *str) ? 1 + str_length(str + 1) : 0;
+	}
+
+	constexpr bool str_equal(const char* str1, const char* str2) {
+		if (!str1 && !str2) return true;
+		if ((!str1 && str2) || (str1 && !str2) || (*str1 != *str2)) return false;
+		return (*str1) ? str_equal(str1 + 1, str2 + 1) : true;
 	}
 
 	export
@@ -41,7 +47,7 @@ export namespace utils {
 
 		[[nodiscard]]
 		constexpr size_t size() const {
-			return length(data());
+			return str_length(data());
 		}
 
 		[[nodiscard]]
@@ -78,7 +84,7 @@ export namespace utils {
 
 	template<>
 	constexpr void _concat<char const*>(string_static& src, const char* other) {
-		size_t other_length = utils::length(other);
+		size_t other_length = utils::str_length(other);
 		size_t res_index = src.next_index();
 		for (size_t i = 0; i < other_length && res_index != src.last_index() && other[i] != '\0'; ++i) {
 			src[res_index++] = other[i];

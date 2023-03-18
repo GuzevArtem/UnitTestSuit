@@ -106,6 +106,7 @@ export namespace Testing {
 		virtual void setView(TestViewInterface* view) = 0;
 		virtual TestViewInterface* view() const = 0;
 
+		constexpr virtual bool testExists(char const* name) = 0;
 		virtual void run() = 0;
 		virtual void registerTestMethods() = 0;
 

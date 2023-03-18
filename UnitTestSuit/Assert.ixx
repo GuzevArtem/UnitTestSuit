@@ -326,6 +326,26 @@ export namespace Testing {
 		static void Fail(std::string message = {}) { throw AssertFailedException(message); }
 		static void Skip(std::string message = {}) { throw IgnoredException(message); }
 
+		template<std::convertible_to<bool> T>
+		static void True(T actual, std::string message = std::string("Should be True!")) noexcept(false) {
+			equals<bool>(static_cast<bool>(actual), true, message);
+		}
+
+		template<bool t_Actual>
+		static void True(std::string message = std::string("Should be True!")) noexcept(false) {
+			equals<bool>(t_Actual, true, message);
+		}
+
+		template<std::convertible_to<bool> T>
+		static void False(T actual, std::string message = std::string("Should be False!")) noexcept(false) {
+			equals<bool>(static_cast<bool>(actual), false, message);
+		}
+
+		template<bool t_Actual>
+		static void False(std::string message = std::string("Should be False!")) noexcept(false) {
+			equals<bool>(t_Actual, false , message);
+		}
+
 		template<typename T>
 		static void notZero(T actual, std::string message = {}) noexcept(false) {
 			T example{};
@@ -354,6 +374,13 @@ export namespace Testing {
 		static void derivedFrom(Actual, std::string message = {}) noexcept(false) {
 			if (!std::is_base_of_v<Base, Actual>) {
 				throw AssertInheritenceException<Actual, Base>(message);
+			}
+		}
+
+		template<typename Example, typename T>
+		static void same(std::string message = {}) noexcept(false) {
+			if constexpr (!std::is_same_v<Example, T>) {
+				throw AssertSameException<T, Example>(message);
 			}
 		}
 

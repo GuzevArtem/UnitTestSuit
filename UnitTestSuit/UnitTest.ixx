@@ -3,6 +3,7 @@ module;
 #include <format>
 #include <functional>
 #include <concepts>
+#include <string>
 
 export module Testing:UnitTest;
 
@@ -26,23 +27,32 @@ export namespace Testing {
 	template<TestContextType ContextType, FunctorType<void, ContextType&> functor>
 		class UnitTestBase : public UnitTestInterface {
 	private:
-		char const* m_name;
+		std::string m_name;
 		functor m_testFunction;
 		ContextType* m_context;
 		TestClassInterface* m_parent;
 		std::string m_errorMessage;
-
+	private:
+		
 	public:
-		constexpr UnitTestBase(char const* name, TestClassInterface* parent, functor func) : m_name(name), m_parent(parent), m_testFunction(func) {
+		constexpr UnitTestBase(const std::string& name, TestClassInterface* parent, functor func) : m_name(name), m_parent(parent), m_testFunction(func) {
 			m_context = new ContextType(this);
 		}
+		constexpr UnitTestBase(std::string&& name, TestClassInterface* parent, functor func) : m_name(name), m_parent(parent), m_testFunction(func) {
+			m_context = new ContextType(this);
+		}
+		constexpr UnitTestBase(char const* name, TestClassInterface* parent, functor func) : UnitTestBase(std::string(name), parent, func) {}
+		constexpr UnitTestBase(const std::string_view& name, TestClassInterface* parent, functor func) : UnitTestBase(std::string(name), parent, func) {}
+		constexpr UnitTestBase(std::string_view&& name, TestClassInterface* parent, functor func) : UnitTestBase(std::string(name), parent, func) {}
+		constexpr UnitTestBase(const utils::string_static& name, TestClassInterface* parent, functor func) : UnitTestBase(std::to_string(name), parent, func) {}
+		constexpr UnitTestBase(utils::string_static&& name, TestClassInterface* parent, functor func) : UnitTestBase(std::to_string(name), parent, func) {}
 
 		virtual ~UnitTestBase() {
 			delete m_context;
 		}
 
 	public:
-		constexpr virtual char const* name() const override { return m_name; }
+		constexpr virtual char const* name() const override { return m_name.c_str(); }
 
 		virtual TestViewInterface* view() const override { return m_parent ? m_parent->view() : nullptr; }
 
@@ -99,6 +109,12 @@ export namespace Testing {
 	class UnitTest : public UnitTestBase<TestContext, functor> {
 	public:
 		constexpr UnitTest(char const* name, TestClassInterface* parent, functor func) : UnitTestBase<TestContext, functor>(name, parent, func) {}
+		constexpr UnitTest(const std::string_view & name, TestClassInterface* parent, functor func) : UnitTestBase<TestContext, functor>(name, parent, func) {}
+		constexpr UnitTest(std::string_view&& name, TestClassInterface* parent, functor func) : UnitTestBase<TestContext, functor>(name, parent, func) {}
+		constexpr UnitTest(const std::string& name, TestClassInterface* parent, functor func) : UnitTestBase<TestContext, functor>(name, parent, func) {}
+		constexpr UnitTest(std::string&& name, TestClassInterface* parent, functor func) : UnitTestBase<TestContext, functor>(name, parent, func) {}
+		constexpr UnitTest(const utils::string_static& name, TestClassInterface* parent, functor func) : UnitTestBase<TestContext, functor>(name, parent, func) {}
+		constexpr UnitTest(utils::string_static&& name, TestClassInterface* parent, functor func) : UnitTestBase<TestContext, functor>(name, parent, func) {}
 
 		template<typename Function>
 		static void instance(std::vector<UnitTestInterface*>& result, char const* name, TestClassInterface* parent, Function func) {
@@ -111,25 +127,7 @@ export namespace Testing {
 	class UnitTestTyped : public UnitTestBase<TestContextTyped<Type>, functor> {
 		typedef UnitTestBase<TestContextTyped<Type>, functor> inherited;
 	public:
-		constexpr UnitTestTyped(char const* name, TestClassInterface* parent, functor func) : UnitTestBase<TestContextTyped<Type>, functor>(name, parent, func) {}
-
-		constexpr virtual char const* name() const override {
-			char const* name_ptr = inherited::name();
-			char const* type_name_ptr = helper::TypeParse<Type>::name;
-			size_t name_length = utils::length(name_ptr);
-			size_t type_name_length = utils::length(type_name_ptr);
-			std::array<char, 256> result_holder;
-			for (size_t i = 0; i < name_length; ++i) {
-				result_holder[i] = name_ptr[i];
-			}
-			result_holder[name_length] = '<';
-			for (size_t i = 0; i < type_name_length; ++i) {
-				result_holder[name_length + i + 1] = type_name_ptr[i];
-			}
-			result_holder[name_length + type_name_length + 1] = '>';
-			result_holder[name_length + type_name_length + 2] = '\0';
-			return result_holder.data();
-		}
+		constexpr UnitTestTyped(char const* name, TestClassInterface* parent, functor func) : UnitTestBase<TestContextTyped<Type>, functor>(std::move(utils::concat(name, '<', helper::TypeParse<Type>::name, '>')), parent, func) {}
 
 		template<typename Function>
 		static void instance(std::vector<UnitTestInterface*>& result, char const* name, TestClassInterface* parent, Function func) {

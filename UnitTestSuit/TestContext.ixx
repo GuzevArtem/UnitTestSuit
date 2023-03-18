@@ -5,6 +5,7 @@ module;
 #include <vector>
 #include <array>
 #include <any>
+#include <type_traits>
 
 export module Testing:TestContext;
 
@@ -27,12 +28,18 @@ export namespace Testing {
 		virtual constexpr void state(TestState state) override { m_state = state; }
 
 	public:
-		template<typename T>
-		constexpr T createTestObject() { return {}; }
+		template<typename T, typename... Args>
+		constexpr auto createTestObject(Args&&... args) -> std::enable_if_t<std::is_constructible_v<T, Args...>, T> {
+			return T(args...);
+		}
+		template<typename T, typename... Args>
+		constexpr auto createTestObject(Args&&... args) -> std::enable_if_t<!std::is_constructible_v<T, Args...>, T> {
+			return this->createTestObject<T>();
+		}
 		template<typename T>
 		constexpr const T createTestObject() const { return {}; }
 
-		template<typename T, class... Args >
+		template<typename T, typename... Args >
 		constexpr T* createTestObjectPointed(Args&&... args) {
 			T* obj = &m_controlledObjects.emplace_back(std::make_any<T>(std::forward<Args>(args)...));
 			return obj;
@@ -110,7 +117,16 @@ export namespace Testing {
 		inline TestContextTyped(UnitTestInterface* owner) : TestContext(owner) {}
 
 	public:
-		constexpr Type createTestObject() { return {}; }
+		template<typename... Args>
+		constexpr auto createTestObject(Args&&... args) -> std::enable_if_t<std::is_constructible_v<Type, Args...>, Type>
+		{
+			return Type(args...);
+		}
+		template<typename... Args>
+		constexpr auto createTestObject(Args&&... args) -> std::enable_if_t<!std::is_constructible_v<Type, Args...>, Type>
+		{
+			return this->createTestObject();
+		}
 		constexpr const Type createTestObject() const { return {}; }
 
 		template<size_t Count>
