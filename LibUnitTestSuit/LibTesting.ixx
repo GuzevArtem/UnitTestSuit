@@ -2,6 +2,7 @@ module;
 
 #include "pch.h"
 #include "defines.h"
+#include <chrono>
 
 export module LibTesting;
 

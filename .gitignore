@@ -54,5 +54,5 @@
 # Custom
 UnitTestSuit.vcxproj.FileListAbsolute.txt
 *.exp
-/UnitTestSuit/x64/Debug
-/LibUnitTestSuit/x64/Debug
+/UnitTestSuit/x64/*
+/LibUnitTestSuit/x64/*

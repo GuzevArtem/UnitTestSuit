@@ -4,6 +4,7 @@ module;
 #include <concepts>
 #include <vector>
 #include <algorithm>
+#include <chrono>
 
 export module Testing:TestSuit;
 
@@ -50,6 +51,8 @@ export namespace Testing {
 			size_t ignoredTestsCount = 0;
 			size_t stoppedTestsCount = 0;
 
+			const auto start_time = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
+			const std::chrono::steady_clock::time_point start_at = std::chrono::steady_clock::now();
 			for (TestClassInterface* cls : m_testClasses) {
 				if (!cls) {
 					throw "TestSuit::run() Trying to run (null) as TestClass!";
@@ -83,12 +86,20 @@ export namespace Testing {
 				ignoredTestsCount += cls->getIgnoredTestsCount();
 				stoppedTestsCount += cls->getStoppedTestsCount();
 			}
+			const std::chrono::nanoseconds total_time = std::chrono::steady_clock::now() - start_at;
 
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format("__________________ TEST RUN COMPLETED _____________________"));
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format(""));
 			m_view->addEntry(ViewLevel::info, std::format("Finished tests execution for {}/{} classes.", finishedClassCount, m_testClasses.size()));
+
+			m_view->addEntry(ViewLevel::info, std::format("Started at: {}", start_time));
+			m_view->addEntry(ViewLevel::info, std::format("And took:   "));
+			m_view->append(ViewLevel::info, std::format("{} ", std::chrono::duration_cast<std::chrono::hours>(total_time)));
+			m_view->append(ViewLevel::info, std::format("{} ", std::chrono::duration_cast<std::chrono::minutes>(total_time) % std::chrono::hours(1)));
+			m_view->append(ViewLevel::info, std::format("{} ", std::chrono::duration_cast<std::chrono::seconds>(total_time) % std::chrono::minutes(1)));
+			m_view->append(ViewLevel::info, std::format("{} ", std::chrono::duration_cast<std::chrono::milliseconds>(total_time) % std::chrono::seconds(1)));
 			m_view->indent();
 			m_view->addEntry(ViewLevel::info, std::format("Total completed tests count: {}/{}", succeededTestsCount, totalTestsCount));
 			m_view->addEntry(ViewLevel::info, std::format("Total failed tests count:    {}/{}", failedTestsCount, totalTestsCount));
