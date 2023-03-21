@@ -51,6 +51,10 @@ export namespace Testing {
 			size_t ignoredTestsCount = 0;
 			size_t stoppedTestsCount = 0;
 
+			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
+			m_view->addEntry(ViewLevel::info, std::format("___________________ TEST RUN STARTED ______________________"));
+			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
+			m_view->print();
 			const auto start_time = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
 			const std::chrono::steady_clock::time_point start_at = std::chrono::steady_clock::now();
 			for (TestClassInterface* cls : m_testClasses) {

@@ -191,9 +191,8 @@ export namespace Testing {
 		std::ostream& outStream(ViewLevel level) const {
 			switch (level) {
 				case ViewLevel::invalid:
-					return std::cerr;
 				case ViewLevel::error:
-					//return std::cerr; // skip until synchronization to output will be added
+					return std::cerr;
 				case ViewLevel::trace:
 				case ViewLevel::info:
 				case ViewLevel::warning:
@@ -202,12 +201,18 @@ export namespace Testing {
 			}
 		}
 
+		void flushStreams() const {
+			std::flush(std::cout);
+			std::flush(std::cerr);
+		}
+
 		virtual void print() override {
 			while (m_entryIndex < m_entries.size()) {
 				const Entry& entry = m_entries[m_entryIndex];
 				outStream(entry.level) << std::format("{}\n", entry.data);
 				++m_entryIndex;
 			}
+			flushStreams();
 		}
 
 		virtual void indent(size_t count) override { 
