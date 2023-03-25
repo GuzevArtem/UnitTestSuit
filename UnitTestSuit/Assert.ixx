@@ -534,7 +534,7 @@ export namespace Testing {
 			{ a < b } -> std::_Boolean_testable;
 			{ a > b } -> std::_Boolean_testable;
 		}
-		static void notEquals(T threshold, T actual, T expected, std::string message = {}) noexcept(false) {
+		static void notEquals(T tolerance, T actual, T expected, std::string message = {}) noexcept(false) {
 			if ((actual < (expected - tolerance)) || (actual > (expected + tolerance))) {
 				return;
 			}
