@@ -455,6 +455,30 @@ export namespace Testing {
 			throw AssertEqualsException(expected, actual, message);
 		}
 
+		template<typename T> requires requires (const std::remove_reference_t<T>& a, const std::remove_reference_t<T>& b) {
+			{ a - b }->std::convertible_to<T>;
+			{ a < b } -> std::_Boolean_testable;
+			{ a > b } -> std::_Boolean_testable;
+		}
+		static void equals(T tolerance, T actual, T expected, std::string message = {}) noexcept(false) {
+			if ((actual > (expected - tolerance)) && (actual < (expected + tolerance))) {
+				return;
+			}
+			throw AssertEqualsException(expected, actual, message);
+		}
+
+		template<typename T1, typename T2> requires requires (const std::remove_reference_t<T1>& a, const std::remove_reference_t<T2>& b) {
+			{ a - b } -> std::convertible_to<std::common_type_t<T1, T2>>;
+			{ a < b } -> std::_Boolean_testable;
+			{ a > b } -> std::_Boolean_testable;
+		}
+		static void equals(std::common_type_t<T1, T2> tolerance, T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			if ((actual > (expected - tolerance)) && (actual < (expected + tolerance))) {
+				return;
+			}
+			throw AssertEqualsException(expected, actual, message);
+		}
+
 		template<typename T>
 		static void equals(T actual, T expected, std::string message = {}) noexcept(false) {
 			constexpr size_t sizeofT = sizeof(T);
@@ -503,6 +527,30 @@ export namespace Testing {
 			if (actual == expected) {
 				throw AssertNotEqualsException(expected, actual, message);
 			}
+		}
+
+		template<typename T> requires requires (const std::remove_reference_t<T>& a, const std::remove_reference_t<T>& b) {
+			{ a - b }->std::convertible_to<T>;
+			{ a < b } -> std::_Boolean_testable;
+			{ a > b } -> std::_Boolean_testable;
+		}
+		static void notEquals(T threshold, T actual, T expected, std::string message = {}) noexcept(false) {
+			if ((actual < (expected - tolerance)) || (actual > (expected + tolerance))) {
+				return;
+			}
+			throw AssertNotEqualsException(expected, actual, message);
+		}
+
+		template<typename T1, typename T2> requires requires (const std::remove_reference_t<T1>& a, const std::remove_reference_t<T2>& b) {
+			{ a - b } -> std::convertible_to<std::common_type_t<T1, T2>>;
+			{ a < b } -> std::_Boolean_testable;
+			{ a > b } -> std::_Boolean_testable;
+		}
+		static void notEquals(std::common_type_t<T1, T2> tolerance, T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			if ((actual < (expected - tolerance)) || (actual > (expected + tolerance))) {
+				return;
+			}
+			throw AssertNotEqualsException(expected, actual, message);
 		}
 
 		template<typename T>

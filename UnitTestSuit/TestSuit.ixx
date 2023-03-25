@@ -131,7 +131,7 @@ export namespace Testing {
 					const std::string errorMessage = test->errorMessage();
 					m_view->addEntry(ViewLevel::info, errorMessage, true, m_errorLinesToPrint);
 					const std::string::difference_type allLines = std::count(errorMessage.begin(), errorMessage.end(), '\n');
-					const auto skippedLines = allLines - m_errorLinesToPrint;
+					const auto skippedLines = (allLines > (ptrdiff_t)m_errorLinesToPrint) ? (allLines - m_errorLinesToPrint) : 0;
 					if (m_errorLinesToPrint && skippedLines > 0) {
 						m_view->addEntry(ViewLevel::info, std::format("... {} lines skipped ...", skippedLines));
 					}
