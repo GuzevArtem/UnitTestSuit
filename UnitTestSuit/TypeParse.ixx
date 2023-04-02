@@ -9,7 +9,7 @@ constexpr const char* resolveTypeName<X>() {\
 	return #X;\
 }
 
-export module Helpers:TypeParse;
+export module TypeParse;
 
 export namespace helper {
 	export

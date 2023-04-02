@@ -9,7 +9,7 @@ module;
 export module Testing:Assert;
 
 import :TestException;
-import Helpers;
+import TypeParse;
 
 export namespace Testing {
 

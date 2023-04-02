@@ -10,7 +10,7 @@ module;
 export module Testing:Expected;
 
 import :TestException;
-import Helpers;
+import TypeParse;
 
 export namespace Testing {
 

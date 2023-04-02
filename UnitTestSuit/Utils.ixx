@@ -10,7 +10,7 @@ export module Utils;
 
 export import :FunctionWrapper;
 
-import Helpers;
+import TypeParse;
 
 export namespace utils {
 	constexpr int str_length(const char* str) {

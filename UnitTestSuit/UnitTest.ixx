@@ -12,7 +12,7 @@ import :TestContext;
 import :TestException;
 import :Benchmark;
 import :Assert;
-import Helpers;
+import TypeParse;
 import Utils;
 
 export namespace Testing {

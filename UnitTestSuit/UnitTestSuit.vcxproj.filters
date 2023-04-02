@@ -66,9 +66,6 @@
     <ClCompile Include="FunctionWrapper.ixx">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="Helpers.ixx">
-      <Filter>Source Files\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="TypeParse.ixx">
       <Filter>Source Files\Helpers</Filter>
     </ClCompile>
