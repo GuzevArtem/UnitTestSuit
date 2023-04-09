@@ -39,6 +39,16 @@ export namespace Testing {
 
 	template<typename T1, std::_Partially_ordered_with<T1> T2>
 	struct Comparable<T1, T2> : std::bool_constant<true> {};
+
+
+	template<typename T>
+	struct FormatterAvailable : std::bool_constant<std::is_constructible_v<std::formatter<T>>> {};
+
+	template<typename T>
+	constexpr bool FormatterAvailable_v = FormatterAvailable<T>::value;
+
+	template<typename T>
+	concept HasFormatter = FormatterAvailable_v<T>;
 }
 
 export namespace Testing {
@@ -86,7 +96,11 @@ export namespace Testing {
 		AssertEqualsException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertEqualsException: expected to be {} but was {}\n{}", expected, actual, inherited::reason());
+			if constexpr (FormatterAvailable_v<T1> && FormatterAvailable_v<T2>) {
+				return std::format("AssertEqualsException: expected to be {} but was {}\n{}", expected, actual, inherited::reason());
+			} else {
+				return std::format("AssertEqualsException: expected and actual are not equal\n{}", inherited::reason());
+			}
 		}
 	};
 
@@ -98,7 +112,11 @@ export namespace Testing {
 		AssertSameException(std::string message = {}) : inherited(message) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertSameException: expected {} to be same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
+			if constexpr (FormatterAvailable_v<T1> && FormatterAvailable_v<T2>) {
+				return std::format("AssertSameException: expected {} to be same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
+			} else {
+				return std::format("AssertSameException: expected and actual are not same\n{}", inherited::reason());
+			}
 		}
 	};
 
@@ -114,14 +132,34 @@ export namespace Testing {
 		AssertSameException(T* expected, T* actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			if (expected && actual) {
-				return std::format("AssertSameException: expected [0x{:h}]{} to point at same object as [0x{:#h}]{}\n{}", expected, *expected, actual, *actual, inherited::reason());
-			} else if (expected) {
-				return std::format("AssertSameException: expected [0x{:h}]{} to point at same object as [0x00000000](nullptr)\n{}", expected, *expected, inherited::reason());
-			} else if (actual) {
-				return std::format("AssertSameException: expected [0x00000000](nullptr) to point at same object as [0x{:#h}]{}\n{}", actual, *actual, inherited::reason());
+			if constexpr (FormatterAvailable_v<T> && FormatterAvailable_v<T*>) {
+				if (expected && actual) {
+					return std::format("AssertSameException: expected [0x{:h}]{} to point at same object as [0x{:#h}]{}\n{}", expected, *expected, actual, *actual, inherited::reason());
+				} else if (expected) {
+					return std::format("AssertSameException: expected [0x{:h}]{} to point at same object as [0x00000000](nullptr)\n{}", expected, *expected, inherited::reason());
+				} else if (actual) {
+					return std::format("AssertSameException: expected [0x00000000](nullptr) to point at same object as [0x{:#h}]{}\n{}", actual, *actual, inherited::reason());
+				}
+				//both are nullptr, so they are same
+			} else if constexpr (!FormatterAvailable_v<T> && FormatterAvailable_v<T*>) {
+				if (expected && actual) {
+					return std::format("AssertSameException: expected [0x{:h}] to point at same object as [0x{:#h}]\n{}", expected, actual, inherited::reason());
+				} else if (expected) {
+					return std::format("AssertSameException: expected [0x{:h}] to point at same object as [0x00000000](nullptr)\n{}", expected, inherited::reason());
+				} else if (actual) {
+					return std::format("AssertSameException: expected [0x00000000](nullptr) to point at same object as [0x{:#h}]\n{}", actual, inherited::reason());
+				}
+				//both are nullptr, so they are same
+			} else {
+				if (expected && actual) {
+					return std::format("AssertSameException: expected to point at same object\n{}", inherited::reason());
+				} else if (expected) {
+					return std::format("AssertSameException: expected to point at same object as [0x00000000](nullptr)\n{}", inherited::reason());
+				} else if (actual) {
+					return std::format("AssertSameException: expected [0x00000000](nullptr) and actual to point at same object\n{}", inherited::reason());
+				}
+				//both are nullptr, so they are same
 			}
-			//both are nullptr, so they are same
 		}
 	};
 
@@ -132,7 +170,7 @@ export namespace Testing {
 	public:
 		AssertNotSameException(std::string message = {}) : inherited(message) {}
 
-		[[nodiscard]] virtual std::string reason() const override {
+		[[nodiscard]] virtual std::string reason() const override { //TODO requires TypeParse::name to exist
 			return std::format("AssertNotSameException: expected {} to be same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
 		}
 	};
@@ -149,12 +187,28 @@ export namespace Testing {
 		AssertNotSameException(T* expected, T* actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			if (expected && actual) {
-				return std::format("AssertNotSameException: expected [0x{:h}]{} to not point at same object as [0x{:#h}]{}\n{}", expected, *expected, actual, *actual, inherited::reason());
-			} else if (!expected && !actual) {
-				return std::format("AssertNotSameException: expected [0x00000000](nullptr) to not point at same object as [0x00000000](nullptr)\n{}", inherited::reason());
+			if constexpr (FormatterAvailable_v<T> && FormatterAvailable_v<T*>) {
+				if (expected && actual) {
+					return std::format("AssertNotSameException: expected [0x{:h}]{} to not point at same object as [0x{:#h}]{}\n{}", expected, *expected, actual, *actual, inherited::reason());
+				} else if (!expected && !actual) {
+					return std::format("AssertNotSameException: expected [0x00000000](nullptr) to not point at same object as [0x00000000](nullptr)\n{}", inherited::reason());
+				}
+				//one is not nullptr, so ...
+			} else if constexpr (!FormatterAvailable_v<T> && FormatterAvailable_v<T*>) {
+				if (expected && actual) {
+					return std::format("AssertNotSameException: expected [0x{:h}] to not point at same object as [0x{:#h}]\n{}", expected, actual, inherited::reason());
+				} else if (!expected && !actual) {
+					return std::format("AssertNotSameException: expected [0x00000000](nullptr) to not point at same object as [0x00000000](nullptr)\n{}", inherited::reason());
+				}
+				//one is not nullptr, so ...
+			} else {
+				if (expected && actual) {
+					return std::format("AssertNotSameException: expected to not point at same object \n{}", inherited::reason());
+				} else if (!expected && !actual) {
+					return std::format("AssertNotSameException: expected [0x00000000](nullptr) to not point at same object as [0x00000000](nullptr)\n{}", inherited::reason());
+				}
+				//one is not nullptr, so ...
 			}
-			//one is not nullptr, so ...
 		}
 	};
 
@@ -169,7 +223,11 @@ export namespace Testing {
 		AssertNotEqualsException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertNotEqualsException: expected not to be {} but was {}\n{}", expected, actual, inherited::reason());
+			if constexpr (FormatterAvailable_v<T1> && FormatterAvailable_v<T2>) {
+				return std::format("AssertNotEqualsException: expected not to be {} but was {}\n{}", expected, actual, inherited::reason());
+			} else {
+				return std::format("AssertNotEqualsException: expected not to be equal\n{}", inherited::reason());
+			}
 		}
 	};
 
@@ -184,7 +242,11 @@ export namespace Testing {
 		AssertLessException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertLessException: expected actual {} to be less than {}\n{}", actual, expected, inherited::reason());
+			if constexpr (FormatterAvailable_v<T1> && FormatterAvailable_v<T2>) {
+				return std::format("AssertLessException: expected actual {} to be less than {}\n{}", actual, expected, inherited::reason());
+			} else {
+				return std::format("AssertLessException: actual is not less than expected\n{}", inherited::reason());
+			}
 		}
 	};
 
@@ -199,7 +261,11 @@ export namespace Testing {
 		AssertLessOrEqualException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertLessException: expected actual {} to be less or equal to {}\n{}", actual, expected, inherited::reason());
+			if constexpr (FormatterAvailable_v<T1> && FormatterAvailable_v<T2>) {
+				return std::format("AssertLessOrEqualException: expected actual {} to be less or equal to {}\n{}", actual, expected, inherited::reason());
+			} else {
+				return std::format("AssertLessOrEqualException: actual is not less or equal to expected\n{}", inherited::reason());
+			}
 		}
 	};
 
@@ -214,7 +280,11 @@ export namespace Testing {
 		AssertGreaterException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertLessException: expected actual {} to be greater than {}\n{}", actual, expected, inherited::reason());
+			if constexpr (FormatterAvailable_v<T1> && FormatterAvailable_v<T2>) {
+				return std::format("AssertGreaterException: expected actual {} to be greater than {}\n{}", actual, expected, inherited::reason());
+			} else {
+				return std::format("AssertGreaterException: actual is not greater than expected\n{}", inherited::reason());
+			}
 		}
 	};
 
@@ -229,7 +299,11 @@ export namespace Testing {
 		AssertGreaterOrEqualException(T1 expected, T2 actual, std::string message = {}) : inherited(message), expected(expected), actual(actual) {}
 
 		[[nodiscard]] virtual std::string reason() const override {
-			return std::format("AssertLessException: expected actual {} to be greater or equal to {}\n{}", actual, expected, inherited::reason());
+			if constexpr (FormatterAvailable_v<T1> && FormatterAvailable_v<T2>) {
+				return std::format("AssertGreaterOrEqualException: expected actual {} to be greater or equal to {}\n{}", actual, expected, inherited::reason());
+			} else {
+				return std::format("AssertGreaterOrEqualException: actual is not greater or equal to expected\n{}", inherited::reason());
+			}
 		}
 	};
 
@@ -242,7 +316,7 @@ export namespace Testing {
 		AssertInheritenceException(std::string message = {}) : inherited(message) {}
 
 	public:
-		[[nodiscard]] virtual std::string reason() const override {
+		[[nodiscard]] virtual std::string reason() const override { //TODO requires TypeParse::name to exist
 			return std::format("AssertInheritenceException: expected {} to base class of {}\n{}", helper::TypeParse<Base>::name, helper::TypeParse<Derived>::name, inherited::reason());
 		}
 	};
@@ -369,6 +443,22 @@ export namespace Testing {
 		static void isNullptr(T* actual, std::string message = {}) noexcept(false) {
 			equals<T>((T)nullptr, actual, message);
 		}
+
+		template<typename T> requires std::is_floating_point_v<T>
+		static void isNan(T actual, std::string message = {}) noexcept(false) {
+			if (std::isnan(actual)) {
+				return;
+			}
+			throw AssertEqualsException(std::numeric_limits<double_t>::quiet_NaN(), actual, message);
+		}
+
+		template<typename T> requires std::is_floating_point_v<T>
+		static void notNan(T actual, std::string message = {}) noexcept(false) {
+			if (!std::isnan(actual)) {
+				return;
+			}
+			throw AssertNotEqualsException(std::numeric_limits<double_t>::quiet_NaN(), actual, message);
+		}
 		
 		template<typename Base, typename Actual>
 		static void derivedFrom(Actual, std::string message = {}) noexcept(false) {
@@ -415,6 +505,24 @@ export namespace Testing {
 	// ************************************************ Equals ***************************************************
 		template<typename T1, CouldBeEqualTo<T1> T2>
 		static void equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
+				if (std::isnan(actual)) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			}
+			if constexpr (!std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(expected)) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			}
+			if constexpr (std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) != std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
+					return;
+				}
+			}
 			if (actual != expected) {
 				throw AssertEqualsException(expected, actual, message);
 			}
@@ -422,6 +530,14 @@ export namespace Testing {
 
 		template<typename T1, CouldNotBeEqualTo<T1> T2>
 		static void equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T1> || std::is_floating_point_v<T2>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) != std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
+					return;
+				}
+			}
 			if (expected != actual) {
 				throw AssertEqualsException(expected, actual, message);
 			}
@@ -439,16 +555,16 @@ export namespace Testing {
 			}
 		}
 
-		template<typename T1, typename T2>
-		static auto equals(T1* actual, T2* expected, std::string message = {}) noexcept(false) -> std::enable_if_t<Equalable<std::remove_pointer_t<T1>, std::remove_pointer_t<T2>>::value, void> {
-			if (actual == expected) {
-				return;
-			}
-			throw AssertEqualsException(expected, actual, message);
-		}
-
 		template<std::equality_comparable T>
 		static void equals(T actual, T expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit(actual) == std::signbit(expected))) {
+					return;
+				}
+			}
 			if (actual == expected) {
 				return;
 			}
@@ -461,6 +577,14 @@ export namespace Testing {
 			{ a > b } -> std::_Boolean_testable;
 		}
 		static void equals(T tolerance, T actual, T expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit(actual) != std::signbit(expected))) {
+					return;
+				}
+			}
 			if ((actual > (expected - tolerance)) && (actual < (expected + tolerance))) {
 				return;
 			}
@@ -473,6 +597,24 @@ export namespace Testing {
 			{ a > b } -> std::_Boolean_testable;
 		}
 		static void equals(std::common_type_t<T1, T2> tolerance, T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
+				if (std::isnan(actual)) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			}
+			if constexpr (!std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(expected)) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			}
+			if constexpr (std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) != std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
+					return;
+				}
+			}
 			if ((actual > (expected - tolerance)) && (actual < (expected + tolerance))) {
 				return;
 			}
@@ -490,6 +632,24 @@ export namespace Testing {
 	// ************************************************ Not equals ***************************************************
 		template<typename T1, CouldBeEqualTo<T1> T2>
 		static void notEquals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
+				if (std::isnan(actual)) {
+					return;
+				}
+			}
+			if constexpr (!std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(expected)) {
+					return;
+				}
+			}
+			if constexpr (std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) != std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
+					return;
+				}
+			}
 			if (actual == expected) {
 				throw AssertNotEqualsException(expected, actual, message);
 			}
@@ -497,6 +657,24 @@ export namespace Testing {
 
 		template<typename T1, CouldNotBeEqualTo<T1> T2>
 		static void notEquals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
+				if (std::isnan(actual)) {
+					return;
+				}
+			}
+			if constexpr (!std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(expected)) {
+					return;
+				}
+			}
+			if constexpr (std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) != std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
+					return;
+				}
+			}
 			if (expected == actual) {
 				throw AssertNotEqualsException(expected, actual, message);
 			}
@@ -513,17 +691,16 @@ export namespace Testing {
 			//if sizeof not match they are definitely not equals
 		}
 
-		template<typename T1, typename T2>
-		static auto notEquals(T1* actual, T2* expected, std::string message = {}) noexcept(false) -> std::enable_if_t<Equalable<std::remove_pointer_t<T1>, std::remove_pointer_t<T2>>::value, void> {
-			if (actual != expected) {
-				//early exit if not same
-				return;
-			}
-			throw AssertNotEqualsException(expected, actual, message);
-		}
-
 		template<std::equality_comparable T>
 		static void notEquals(T actual, T expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit(actual) != std::signbit(expected))) {
+					return;
+				}
+			}
 			if (actual == expected) {
 				throw AssertNotEqualsException(expected, actual, message);
 			}
@@ -535,6 +712,14 @@ export namespace Testing {
 			{ a > b } -> std::_Boolean_testable;
 		}
 		static void notEquals(T tolerance, T actual, T expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit(actual) != std::signbit(expected))) {
+					return;
+				}
+			}
 			if ((actual < (expected - tolerance)) || (actual > (expected + tolerance))) {
 				return;
 			}
@@ -547,6 +732,24 @@ export namespace Testing {
 			{ a > b } -> std::_Boolean_testable;
 		}
 		static void notEquals(std::common_type_t<T1, T2> tolerance, T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
+				if (std::isnan(actual)) {
+					return;
+				}
+			}
+			if constexpr (!std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(expected)) {
+					return;
+				}
+			}
+			if constexpr (std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(actual) && std::isnan(expected)) {
+					return;
+				}
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) != std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
+					return;
+				}
+			}
 			if ((actual < (expected - tolerance)) || (actual > (expected + tolerance))) {
 				return;
 			}
@@ -563,6 +766,11 @@ export namespace Testing {
 
 		template<CouldBeCompared T>
 		static void less(T actual, T expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual) || std::isnan(expected)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
 			if (!(actual < expected)) {
 				throw AssertLessException(expected, actual, message);
 			}
@@ -570,6 +778,16 @@ export namespace Testing {
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void less(T actual, To expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
+			if constexpr (std::is_floating_point_v<To>) {
+				if (std::isnan(expected)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
 			if (!(actual < expected)) {
 				throw AssertLessException(expected, actual, message);
 			}
@@ -577,6 +795,11 @@ export namespace Testing {
 
 		template<CouldBeCompared T>
 		static void lessOrEqual (T actual, T expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual) || std::isnan(expected)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
 			if (!(actual <= expected)) {
 				throw AssertLessOrEqualException(expected, actual, message);
 			}
@@ -584,6 +807,16 @@ export namespace Testing {
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void lessOrEqual(T actual, To expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
+			if constexpr (std::is_floating_point_v<To>) {
+				if (std::isnan(expected)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
 			if (!(actual <= expected)) {
 				throw AssertLessOrEqualException(expected, actual, message);
 			}
@@ -591,6 +824,11 @@ export namespace Testing {
 
 		template<CouldBeCompared T>
 		static void greater(T actual, T expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
 			if (!(actual > expected)) {
 				throw AssertGreaterException(expected, actual, message);
 			}
@@ -598,6 +836,16 @@ export namespace Testing {
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void greater(T actual, To expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
+			if constexpr (std::is_floating_point_v<To>) {
+				if (std::isnan(expected)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
 			if (!(actual > expected)) {
 				throw AssertGreaterException(expected, actual, message);
 			}
@@ -605,6 +853,11 @@ export namespace Testing {
 
 		template<CouldBeCompared T>
 		static void greaterOrEqual(T actual, T expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual) || std::isnan(expected)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
 			if (!(actual >= expected)) {
 				throw AssertGreaterOrEqualException(actual, expected, message);
 			}
@@ -612,6 +865,16 @@ export namespace Testing {
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void greaterOrEqual(T actual, To expected, std::string message = {}) noexcept(false) {
+			if constexpr (std::is_floating_point_v<T>) {
+				if (std::isnan(actual)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
+			if constexpr (std::is_floating_point_v<To>) {
+				if (std::isnan(expected)) {
+					throw AssertLessException(expected, actual, message);
+				}
+			}
 			if (!(actual >= expected)) {
 				throw AssertGreaterOrEqualException(expected, actual, message);
 			}
