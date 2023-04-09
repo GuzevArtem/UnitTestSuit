@@ -519,7 +519,7 @@ export namespace Testing {
 				if (std::isnan(actual) && std::isnan(expected)) {
 					return;
 				}
-				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) != std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) == std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
 					return;
 				}
 			}
@@ -530,11 +530,21 @@ export namespace Testing {
 
 		template<typename T1, CouldNotBeEqualTo<T1> T2>
 		static void equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
-			if constexpr (std::is_floating_point_v<T1> || std::is_floating_point_v<T2>) {
+			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
+				if (std::isnan(actual)) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			}
+			if constexpr (!std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
+				if (std::isnan(expected)) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			}
+			if constexpr (std::is_floating_point_v<T1> && std::is_floating_point_v<T2>) {
 				if (std::isnan(actual) && std::isnan(expected)) {
 					return;
 				}
-				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) != std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) == std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
 					return;
 				}
 			}
@@ -581,7 +591,7 @@ export namespace Testing {
 				if (std::isnan(actual) && std::isnan(expected)) {
 					return;
 				}
-				if (std::isinf(actual) && std::isinf(expected) && (std::signbit(actual) != std::signbit(expected))) {
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit(actual) == std::signbit(expected))) {
 					return;
 				}
 			}
@@ -611,7 +621,7 @@ export namespace Testing {
 				if (std::isnan(actual) && std::isnan(expected)) {
 					return;
 				}
-				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) != std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
+				if (std::isinf(actual) && std::isinf(expected) && (std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)actual) == std::signbit((std::conditional_t<std::is_floating_point_v<T1>, T1, T2>)expected))) {
 					return;
 				}
 			}

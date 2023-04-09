@@ -85,13 +85,13 @@ export namespace Testing {
 		}
 
 	public:
-		virtual void log(std::string&& data, bool immidiate = true) const override {
+		virtual void log(std::string&& data, bool immediate = true) const override {
 			if (!m_owner) {
 				throw "Invalid TestContext! Owner must be not null!";
 			}
 			if (m_owner->view()) {
 				m_owner->view()->addEntry(ViewLevel::info, data);
-				if (immidiate) {
+				if (immediate) {
 					m_owner->view()->print();
 				}
 			}
