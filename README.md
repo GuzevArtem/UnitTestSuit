@@ -13,12 +13,13 @@ Should be fixed after c++23 standard library module appearance.
 
 ## Usage
 
-> c++20 or newer required.
+> * c++20 or newer required.
+> * Module support required
 
 ### Add to project
 
-Use LibUnitTestSuit.dll created by LibUnitTestSuit project.
-<br>Or see [MSDN](https://learn.microsoft.com/en-us/cpp/build/walkthrough-import-stl-header-units?view=msvc-160).
+Add Unit Test Suit to references.
+> See [MSDN](https://learn.microsoft.com/en-us/cpp/build/walkthrough-import-stl-header-units?view=msvc-160).
 
 ### Creating your own test class
 
@@ -127,7 +128,7 @@ public:
 
 	// May not be member function for TestClassTyped
 	static void SampleTestStatic(TestContext& ctx) {
-		Assert::Fail();
+		Assert::fail();
 	}
 	
 	// End of tests
@@ -143,14 +144,21 @@ public:
 		this->addTest("SampleStaticTest", &MyTypedTestClass<Type>::SampleTestStatic);	// add static test
 
 		this->addTest("FailTest", [](TestContext& ctx) -> void {						// add lambda behaving as untyped test
-			Assert::Fail();
+			Assert::fail();
 		});
 		
 		this->addTest("FailTest", [](TestContextTyped<Type>& ctx) -> void {				// add lambda behaving as typed test
-			Assert::Ignore();
+			Assert::ignore();
 		});
 	}
 ```
+
+> `virtual bool TestClassInterface::allowNonUniqueTestNames() const noexcept` returns `false` by default.
+
+> `virtual void TestClassInterface::throwIfNotUniqueTestName(char const* name) noexcept(false)`
+> <br>and
+> <br>`constexpr virtual bool TestClassInterface::testExists(char const* name)`
+> <br>could be overridden too to implement custom logic.
 
 ### Register Test Class
 
@@ -284,7 +292,7 @@ Use it for specific functions measuring during test.
 Or benchmark whole test, just by replacing ```addTest``` with ```addBenchmarkTest```, and optionally specifying number of iterations:
 ```cplusplus
 this->addBenchmarkTest("MyBenchmarkedTest", [](TestContext& ctx) -> void { //TestContextTyped<Type>& if you want typed test 
-		Assert::Fail();
+		Assert::fail();
 	}, 
 	iterations); // how many iterations perform. 1 by default.
 ```
@@ -308,18 +316,44 @@ Expected<>::during([]() {
 Next code will raise ```ExpectedExceptionFail```, that will fail test, if ```foo``` won't throw any exception, or will throw exception that not same as ```CustomUserExceptionType```.
 ```cplusplus
 Expected<CustomUserExceptionType>::during([]() {
-	foo();
+	...
+	some code that could raise exception
+	...
 });
 ```
 
-Special compare function could be provided:
+> lambda, (member) function pointer or functional object could be used as argument.
+
+Special matcher function could be provided:
 ```cplusplus
-Expected<CustomUserExceptionType>::during([]() {
-	foo();
-}, [someValue] (const CustomUserExceptionType& actual) -> bool {
-	return actual.someField == someValue;
-});
+class CustomUserExceptionType : public std::exception {
+	int someField;
+
+	CustomUserExceptionType(int value) : std::exception("CustomUserExceptionType"), someField(value) {}
+}
+
+tempalte<typename Arg>
+static void foo(Arg arg1) {
+	...
+	throw CustomUserExceptionType(1);
+	...
+}
+
+...
+
+const Arg arg1{};
+const int someValue = 1;
+Expected<CustomUserExceptionType>::during(
+	[someValue] (const CustomUserExceptionType& actual) -> bool {
+		return actual.someField == someValue;
+		// will succeed only if exception with matching value will be raised
+		// during evaluation of foo called with arg1
+	},
+	&foo<Arg>,
+	arg1
+);
 ```
+> Exception could be templated as well.
 If captured exception are not convertible to expected type, or compare function returns false, than ```ExpectedExceptionFail``` will be raised, that will fail test.
 
 > If ExceptionType is not provided, then compare function should accept ```const std::exception&``` as argument.

@@ -16,7 +16,7 @@ import :UnitTest;
 import :TestContext;
 import :TestException;
 import TypeParse;
-import Utils;
+import Testing.Utils;
 
 export namespace Testing {
 
@@ -79,6 +79,14 @@ export namespace Testing {
 			}
 		}
 		virtual TestViewInterface* view() const override { return m_view; }
+
+
+		virtual void throwIfNotUniqueTestName(char const* name) noexcept(false) override {
+			if (testExists(name)) {
+				const std::string error_message = std::format("Test with name [{}] already exists in TestClass [{}].", name, this->name());
+				throw std::runtime_error(error_message);
+			}
+		}
 
 		constexpr virtual bool testExists(char const* name) override {
 			for (auto* test : getAllTests()) {
@@ -243,7 +251,7 @@ export namespace Testing {
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
-			inherited::testExists(name);
+			inherited::checkTestNameUnique(name);
 
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContext&> function((void(*)(TestContext&))(func));
@@ -258,7 +266,7 @@ export namespace Testing {
 
 		template<typename Function>
 		void addBenchmarkTest(char const* name, Function func, size_t iterations = 1) {
-			inherited::testExists(name);
+			inherited::checkTestNameUnique(name);
 
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContext&> function((void(*)(TestContext&))(func));
@@ -287,7 +295,7 @@ export namespace Testing {
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
-			inherited::testExists(name);
+			inherited::checkTestNameUnique(name);
 
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
@@ -302,7 +310,7 @@ export namespace Testing {
 
 		template<typename Function>
 		void addBenchmarkTest(char const* name, Function func, size_t iterations = 1) {
-			inherited::testExists(name);
+			inherited::checkTestNameUnique(name);
 
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
@@ -345,7 +353,7 @@ export namespace Testing {
 
 		template<typename Function>
 		void addTest(char const* name, Function func) {
-			inherited::testExists(name);
+			inherited::checkTestNameUnique(name);
 
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));
@@ -360,7 +368,7 @@ export namespace Testing {
 
 		template<typename Function>
 		void addBenchmarkTest(char const* name, Function func, size_t iterations = 1) {
-			inherited::testExists(name);
+			inherited::checkTestNameUnique(name);
 
 			if constexpr (is_static_function_pointer<Function>::value) {
 				utils::FunctionStaticWrapper<void, TestContextTyped<Type>&> function((void(*)(TestContextTyped<Type>&))(func));

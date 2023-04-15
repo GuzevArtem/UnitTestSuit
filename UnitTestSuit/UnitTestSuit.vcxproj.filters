@@ -60,7 +60,7 @@
     <ClCompile Include="Assert.ixx">
       <Filter>Source Files\Testing</Filter>
     </ClCompile>
-    <ClCompile Include="Utils.ixx">
+    <ClCompile Include="Testing.Utils.ixx">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
     <ClCompile Include="FunctionWrapper.ixx">
@@ -69,5 +69,9 @@
     <ClCompile Include="TypeParse.ixx">
       <Filter>Source Files\Helpers</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.md" />
+    <None Include="..\.gitignore" />
   </ItemGroup>
 </Project>

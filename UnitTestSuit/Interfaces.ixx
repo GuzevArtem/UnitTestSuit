@@ -106,6 +106,17 @@ export namespace Testing {
 		virtual void setView(TestViewInterface* view) = 0;
 		virtual TestViewInterface* view() const = 0;
 
+		virtual bool allowNonUniqueTestNames() const noexcept { return false; }
+		
+		bool checkTestNameUnique(char const* name) noexcept(false) {
+			if (allowNonUniqueTestNames()) {
+				return !testExists(name);
+			} else {
+				throwIfNotUniqueTestName(name);
+				return true;
+			}
+		}
+		virtual void throwIfNotUniqueTestName(char const* name) noexcept(false) = 0;
 		constexpr virtual bool testExists(char const* name) = 0;
 		virtual void run() = 0;
 		virtual void registerTestMethods() = 0;

@@ -13,7 +13,7 @@ import :TestException;
 import :Benchmark;
 import :Assert;
 import TypeParse;
-import Utils;
+import Testing.Utils;
 
 export namespace Testing {
 	template<typename T>

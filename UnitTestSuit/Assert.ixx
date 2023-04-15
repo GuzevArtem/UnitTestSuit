@@ -397,26 +397,26 @@ export namespace Testing {
 export namespace Testing {
 	export class Assert {
 	public:
-		static void Fail(std::string message = {}) { throw AssertFailedException(message); }
-		static void Skip(std::string message = {}) { throw IgnoredException(message); }
+		static void fail(std::string message = {}) { throw AssertFailedException(message); }
+		static void skip(std::string message = {}) { throw IgnoredException(message); }
 
 		template<std::convertible_to<bool> T>
-		static void True(T actual, std::string message = std::string("Should be True!")) noexcept(false) {
+		static void isTrue(T actual, std::string message = std::string("Should be True!")) noexcept(false) {
 			equals<bool>(static_cast<bool>(actual), true, message);
 		}
 
 		template<bool t_Actual>
-		static void True(std::string message = std::string("Should be True!")) noexcept(false) {
+		static void isTrue(std::string message = std::string("Should be True!")) noexcept(false) {
 			equals<bool>(t_Actual, true, message);
 		}
 
 		template<std::convertible_to<bool> T>
-		static void False(T actual, std::string message = std::string("Should be False!")) noexcept(false) {
+		static void isFalse(T actual, std::string message = std::string("Should be False!")) noexcept(false) {
 			equals<bool>(static_cast<bool>(actual), false, message);
 		}
 
 		template<bool t_Actual>
-		static void False(std::string message = std::string("Should be False!")) noexcept(false) {
+		static void isFalse(std::string message = std::string("Should be False!")) noexcept(false) {
 			equals<bool>(t_Actual, false , message);
 		}
 
@@ -920,7 +920,7 @@ export namespace Testing {
 	// ************************************************ Or ***************************************************
 	public:
 		template<bool t_PrintAllExceptions, typename AssertFunctionType, typename ...AssertFunctionTypes>
-		static void Or(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
+		static void anyOf(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
 			std::vector<BaseException> capturedExceptions;
 			try {
 				_Or(capturedExceptions, std::forward<AssertFunctionType>(function), std::forward<AssertFunctionTypes>(functions)...);
@@ -937,8 +937,8 @@ export namespace Testing {
 		}
 
 		template<typename ...AssertFunctionTypes>
-		static void Or(AssertFunctionTypes&& ...functions) {
-			return Or<false, AssertFunctionTypes...>(std::forward<AssertFunctionTypes>(functions)...);
+		static void anyOf(AssertFunctionTypes&& ...functions) {
+			return anyOf<false, AssertFunctionTypes...>(std::forward<AssertFunctionTypes>(functions)...);
 		}
 
 	private:
@@ -961,7 +961,7 @@ export namespace Testing {
 	// ************************************************ Nor ***************************************************
 	public:
 		template<bool t_PrintAllExceptions, typename AssertFunctionType, typename ...AssertFunctionTypes>
-		static void Nor(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
+		static void noneOf(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
 			std::vector<BaseException> capturedExceptions;
 			try {
 				_Nor(capturedExceptions, std::forward<AssertFunctionType>(function), std::forward<AssertFunctionTypes>(functions)...);
@@ -978,8 +978,8 @@ export namespace Testing {
 		}
 
 		template<typename ...AssertFunctionTypes>
-		static void Nor(AssertFunctionTypes&& ...functions) {
-			return Nor<false, AssertFunctionTypes...>(std::forward<AssertFunctionTypes>(functions)...);
+		static void noneOf(AssertFunctionTypes&& ...functions) {
+			return noneOf<false, AssertFunctionTypes...>(std::forward<AssertFunctionTypes>(functions)...);
 		}
 
 	private:
@@ -1002,7 +1002,7 @@ export namespace Testing {
 	// ************************************************ And ***************************************************
 	public:
 		template<bool t_PrintAllExceptions, typename AssertFunctionType, typename ...AssertFunctionTypes>
-		static void And(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
+		static void allOf(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
 			std::vector<BaseException> capturedExceptions;
 			try {
 				_And(capturedExceptions, std::forward<AssertFunctionType>(function), std::forward<AssertFunctionTypes>(functions)...);
@@ -1015,8 +1015,8 @@ export namespace Testing {
 		}
 
 		template<typename ...AssertFunctionTypes>
-		static void And(AssertFunctionTypes&& ...functions) {
-			return And<false, AssertFunctionTypes...>(std::forward<AssertFunctionTypes>(functions)...);
+		static void allOf(AssertFunctionTypes&& ...functions) {
+			return allOf<false, AssertFunctionTypes...>(std::forward<AssertFunctionTypes>(functions)...);
 		}
 
 	private:
@@ -1039,7 +1039,7 @@ export namespace Testing {
 	// ************************************************ Nand ***************************************************
 	public:
 		template<bool t_PrintAllExceptions, typename AssertFunctionType, typename ...AssertFunctionTypes>
-		static void Nand(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
+		static void notAllOf(AssertFunctionType&& function, AssertFunctionTypes&& ...functions) {
 			std::vector<BaseException> capturedExceptions;
 			try {
 				_Nand(capturedExceptions, std::forward<AssertFunctionType>(function), std::forward<AssertFunctionTypes>(functions)...);
@@ -1056,8 +1056,8 @@ export namespace Testing {
 		}
 
 		template<typename ...AssertFunctionTypes>
-		static void Nand(AssertFunctionTypes&& ...functions) {
-			return Nand<false, AssertFunctionTypes...>(std::forward<AssertFunctionTypes>(functions)...);
+		static void notAllOf(AssertFunctionTypes&& ...functions) {
+			return notAllOf<false, AssertFunctionTypes...>(std::forward<AssertFunctionTypes>(functions)...);
 		}
 
 	private:

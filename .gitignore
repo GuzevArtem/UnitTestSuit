@@ -55,4 +55,3 @@
 UnitTestSuit.vcxproj.FileListAbsolute.txt
 *.exp
 /UnitTestSuit/x64/*
-/LibUnitTestSuit/x64/*

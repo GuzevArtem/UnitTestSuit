@@ -29,15 +29,17 @@ export namespace Testing {
 
 	public:
 		template<typename T, typename... Args>
-		constexpr auto createTestObject(Args&&... args) -> std::enable_if_t<std::is_constructible_v<T, Args...>, T> {
-			return T(args...);
+		constexpr auto createTestObject(Args&&... args) const -> std::enable_if_t<std::is_constructible_v<T, Args...>, T> {
+			return T(std::forward<Args>(args)...);
 		}
 		template<typename T, typename... Args>
-		constexpr auto createTestObject(Args&&... args) -> std::enable_if_t<!std::is_constructible_v<T, Args...>, T> {
+		constexpr auto createTestObject(Args&&... args) const -> std::enable_if_t<!std::is_constructible_v<T, Args...> && std::is_constructible_v<T>, T> {
 			return this->createTestObject<T>();
 		}
 		template<typename T>
-		constexpr const T createTestObject() const { return {}; }
+		constexpr auto createTestObject() const -> std::enable_if_t<std::is_constructible_v<T>, T> {
+			return T();
+		}
 
 		template<typename T, typename... Args >
 		constexpr T* createTestObjectPointed(Args&&... args) {
@@ -96,13 +98,13 @@ export namespace Testing {
 				}
 			}
 		}
-		virtual void log(const std::string& data, bool immidiate = true) const override {
+		virtual void log(const std::string& data, bool immediate = true) const override {
 			if (!m_owner) {
 				throw "Invalid TestContext! Owner must be not null!";
 			}
 			if (m_owner->view()) {
 				m_owner->view()->addEntry(ViewLevel::info, data);
-				if (immidiate) {
+				if (immediate) {
 					m_owner->view()->print();
 				}
 			}
@@ -118,16 +120,18 @@ export namespace Testing {
 
 	public:
 		template<typename... Args>
-		constexpr auto createTestObject(Args&&... args) -> std::enable_if_t<std::is_constructible_v<Type, Args...>, Type>
+		constexpr auto createTestObject(Args&&... args) const -> std::enable_if_t<std::is_constructible_v<Type, Args...>, Type>
 		{
-			return Type(args...);
+			return Type(std::forward<Args>(args)...);
 		}
 		template<typename... Args>
-		constexpr auto createTestObject(Args&&... args) -> std::enable_if_t<!std::is_constructible_v<Type, Args...>, Type>
+		constexpr auto createTestObject(Args&&... args) const -> std::enable_if_t<!std::is_constructible_v<Type, Args...> && std::is_constructible_v<Type>, Type>
 		{
 			return this->createTestObject();
 		}
-		constexpr const Type createTestObject() const { return {}; }
+		constexpr auto createTestObject() const -> std::enable_if_t<std::is_constructible_v<Type>, Type> {
+			return Type();
+		}
 
 		template<size_t Count>
 		constexpr std::array<Type, Count> createTestObjectsArray() { return {}; }

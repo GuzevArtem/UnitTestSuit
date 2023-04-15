@@ -6,7 +6,7 @@ module;
 #include <string>
 #include <string_view>
 
-export module Utils;
+export module Testing.Utils;
 
 export import :FunctionWrapper;
 
@@ -27,7 +27,7 @@ export namespace utils {
 		template<size_t t_Capacity>
 	class string_ {
 	private:
-		char m_data[t_Capacity] = { }; // array should be full '\0'
+		char m_data[t_Capacity] = {}; // array should be full '\0'
 
 	public:
 		[[nodiscard]]
@@ -74,22 +74,26 @@ export namespace utils {
 
 	typedef string_<256> string_255;
 
-	typedef string_255 string_static;
+	typedef string_<4098> string_static;
 
 	template<typename T>
 	constexpr void _concat(string_static& src, const T other) {
-		const std::string data = std::to_string(other);
-		_concat(src, data.c_str()); 
+		if constexpr (std::is_same_v<T, const char*> || std::is_same_v<T, char*> || std::is_same_v<T, char* const> || std::is_same_v<T, const char* const>) {
+			size_t other_length = utils::str_length(other);
+			size_t res_index = src.next_index();
+			for (size_t i = 0; i < other_length && res_index != src.last_index() && other[i] != '\0'; ++i) {
+				src[res_index++] = other[i];
+			}
+			src[res_index++] = '\0';
+		} else {
+			const std::string data = std::to_string(other);
+			_concat(src, data.c_str());
+		}
 	}
 
 	template<>
-	constexpr void _concat<char const*>(string_static& src, const char* other) {
-		size_t other_length = utils::str_length(other);
-		size_t res_index = src.next_index();
-		for (size_t i = 0; i < other_length && res_index != src.last_index() && other[i] != '\0'; ++i) {
-			src[res_index++] = other[i];
-		}
-		src[res_index++] = '\0';
+	constexpr void _concat<std::string>(string_static& src, const std::string other) {
+		_concat(src, other.c_str());
 	}
 
 	template<>

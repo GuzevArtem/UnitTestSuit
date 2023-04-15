@@ -94,7 +94,11 @@
     <ClCompile Include="TypeParse.ixx" />
     <ClCompile Include="UnitTest.ixx" />
     <ClCompile Include="UnitTestSuit.cpp" />
-    <ClCompile Include="Utils.ixx" />
+    <ClCompile Include="Testing.Utils.ixx" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.gitignore" />
+    <None Include="..\README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
