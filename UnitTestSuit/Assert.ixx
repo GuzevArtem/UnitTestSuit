@@ -1,23 +1,45 @@
 module;
 
-#include <exception>
-#include <stacktrace>
-#include <vector>
-#include <string>
-#include <format>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <exception>
+//#include <vector>
+//#include <string>
+//#include <format>
+//#pragma warning( pop )
 
 export module Testing:Assert;
+
+import std.compat;
 
 import :TestException;
 import TypeParse;
 
 export namespace Testing {
 
-	template<typename T, typename To>
-	concept CouldBeEqualTo = !std::same_as<T, To> && std::_Half_equality_comparable<To, T>;
+	template <class _Ty1, class _Ty2>
+	concept _Half_equality_comparable =
+		requires(const std::remove_reference_t<_Ty1>&__x, const std::remove_reference_t<_Ty2>&__y) {
+			{ __x == __y } -> std::convertible_to<bool>;
+			{ __x != __y } -> std::convertible_to<bool>;
+	};
+
+	template <class _Ty1, class _Ty2>
+	concept _Half_ordered = requires(const std::remove_reference_t<_Ty1>&__t, const std::remove_reference_t<_Ty2>&__u) {
+		{ __t < __u } -> std::convertible_to<bool>;
+		{ __t > __u } -> std::convertible_to<bool>;
+		{ __t <= __u } -> std::convertible_to<bool>;
+		{ __t >= __u } -> std::convertible_to<bool>;
+	};
+
+	template <class _Ty1, class _Ty2>
+	concept _Partially_ordered_with = _Half_ordered<_Ty1, _Ty2> && _Half_ordered<_Ty2, _Ty1>;
 
 	template<typename T, typename To>
-	concept CouldNotBeEqualTo = !std::same_as<T, To> && !std::_Half_equality_comparable<To, T>;
+	concept CouldBeEqualTo = !std::same_as<T, To> && _Half_equality_comparable<To, T>;
+
+	template<typename T, typename To>
+	concept CouldNotBeEqualTo = !std::same_as<T, To> && !_Half_equality_comparable<To, T>;
 
 	template<typename T1, typename T2>
 	struct Equalable : std::bool_constant<false> {};
@@ -29,15 +51,15 @@ export namespace Testing {
 	struct Equalable<T1, T2> : std::bool_constant<true> {};
 
 	template<typename T, typename To>
-	concept CouldBeComparedTo = std::_Half_ordered<T, To>;
+	concept CouldBeComparedTo = _Half_ordered<T, To>;
 
 	template<typename T>
-	concept CouldBeCompared = std::_Half_ordered<T, T>;
+	concept CouldBeCompared = _Half_ordered<T, T>;
 
 	template<typename T1, typename T2>
 	struct Comparable : std::bool_constant<false> {};
 
-	template<typename T1, std::_Partially_ordered_with<T1> T2>
+	template<typename T1, _Partially_ordered_with<T1> T2>
 	struct Comparable<T1, T2> : std::bool_constant<true> {};
 
 
@@ -483,7 +505,7 @@ export namespace Testing {
 
 		template<typename T>
 		static void same(T* actual, T* expected, std::string message = {}) noexcept(false) {
-			if (static_cast<void*>(actual) != static_cast<void*>(expected)) {	//TODO: is it work properly?
+			if (actual != expected) {
 				throw AssertSameException(expected, actual, message);
 			}
 		}
@@ -497,7 +519,7 @@ export namespace Testing {
 
 		template<typename T>
 		static void notSame(T* actual, T* expected, std::string message = {}) noexcept(false) {
-			if (static_cast<void*>(actual) == static_cast<void*>(expected)) {	//TODO: is it work properly?
+			if (actual == expected) {
 				throw AssertNotSameException(expected, actual, message);
 			}
 		}
@@ -505,6 +527,7 @@ export namespace Testing {
 	// ************************************************ Equals ***************************************************
 		template<typename T1, CouldBeEqualTo<T1> T2>
 		static void equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
 				if (std::isnan(actual)) {
 					throw AssertEqualsException(expected, actual, message);
@@ -523,13 +546,29 @@ export namespace Testing {
 					return;
 				}
 			}
-			if (actual != expected) {
-				throw AssertEqualsException(expected, actual, message);
+			// signed unsigned missmatch
+			if constexpr (std::is_unsigned_v<T1> && std::is_signed_v<T2>) {
+				if (expected < 0) {
+					throw AssertEqualsException(expected, actual, message);
+				} else if (actual != (T1)expected) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			} else if constexpr (std::is_unsigned_v<T2> && std::is_signed_v<T1>) {
+				if (actual < 0) {
+					throw AssertEqualsException(expected, actual, message);
+				} else if (actual != (T2)expected) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			} else {
+				if (actual != expected) {
+					throw AssertEqualsException(expected, actual, message);
+				}
 			}
 		}
 
 		template<typename T1, CouldNotBeEqualTo<T1> T2>
 		static void equals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
 				if (std::isnan(actual)) {
 					throw AssertEqualsException(expected, actual, message);
@@ -548,8 +587,23 @@ export namespace Testing {
 					return;
 				}
 			}
-			if (expected != actual) {
-				throw AssertEqualsException(expected, actual, message);
+			// signed unsigned missmatch
+			if constexpr (std::is_unsigned_v<T1> && std::is_signed_v<T2>) {
+				if (expected < 0) {
+					throw AssertEqualsException(expected, actual, message);
+				} else if (actual != (T1)expected) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			} else if constexpr (std::is_unsigned_v<T2> && std::is_signed_v<T1>) {
+				if (actual < 0) {
+					throw AssertEqualsException(expected, actual, message);
+				} else if (actual != (T2)expected) {
+					throw AssertEqualsException(expected, actual, message);
+				}
+			} else {
+				if (expected != actual) {
+					throw AssertEqualsException(expected, actual, message);
+				}
 			}
 		}
 
@@ -567,6 +621,7 @@ export namespace Testing {
 
 		template<std::equality_comparable T>
 		static void equals(T actual, T expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual) && std::isnan(expected)) {
 					return;
@@ -583,10 +638,11 @@ export namespace Testing {
 
 		template<typename T> requires requires (const std::remove_reference_t<T>& a, const std::remove_reference_t<T>& b) {
 			{ a - b }->std::convertible_to<T>;
-			{ a < b } -> std::_Boolean_testable;
-			{ a > b } -> std::_Boolean_testable;
+			{ a < b } -> std::convertible_to<bool>;
+			{ a > b } -> std::convertible_to<bool>;
 		}
 		static void equals(T tolerance, T actual, T expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual) && std::isnan(expected)) {
 					return;
@@ -603,10 +659,11 @@ export namespace Testing {
 
 		template<typename T1, typename T2> requires requires (const std::remove_reference_t<T1>& a, const std::remove_reference_t<T2>& b) {
 			{ a - b } -> std::convertible_to<std::common_type_t<T1, T2>>;
-			{ a < b } -> std::_Boolean_testable;
-			{ a > b } -> std::_Boolean_testable;
+			{ a < b } -> std::convertible_to<bool>;
+			{ a > b } -> std::convertible_to<bool>;
 		}
 		static void equals(std::common_type_t<T1, T2> tolerance, T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
 				if (std::isnan(actual)) {
 					throw AssertEqualsException(expected, actual, message);
@@ -642,6 +699,7 @@ export namespace Testing {
 	// ************************************************ Not equals ***************************************************
 		template<typename T1, CouldBeEqualTo<T1> T2>
 		static void notEquals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
 				if (std::isnan(actual)) {
 					return;
@@ -660,13 +718,29 @@ export namespace Testing {
 					return;
 				}
 			}
-			if (actual == expected) {
-				throw AssertNotEqualsException(expected, actual, message);
+			// signed unsigned missmatch
+			if constexpr (std::is_unsigned_v<T1> && std::is_signed_v<T2>) {
+				if (expected < 0) {
+					return;
+				} else if (actual == (T1)expected) {
+					throw AssertNotEqualsException(expected, actual, message);
+				}
+			} else if constexpr (std::is_unsigned_v<T2> && std::is_signed_v<T1>) {
+				if (actual < 0) {
+					return;
+				} else if (actual == (T2)expected) {
+					throw AssertNotEqualsException(expected, actual, message);
+				}
+			} else {
+				if (actual == expected) {
+					throw AssertNotEqualsException(expected, actual, message);
+				}
 			}
 		}
 
 		template<typename T1, CouldNotBeEqualTo<T1> T2>
 		static void notEquals(T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
 				if (std::isnan(actual)) {
 					return;
@@ -685,8 +759,23 @@ export namespace Testing {
 					return;
 				}
 			}
-			if (expected == actual) {
-				throw AssertNotEqualsException(expected, actual, message);
+			// signed unsigned missmatch
+			if constexpr (std::is_unsigned_v<T1> && std::is_signed_v<T2>) {
+				if (expected < 0) {
+					return;
+				} else if (actual == (T1)expected) {
+					throw AssertNotEqualsException(expected, actual, message);
+				}
+			} else if constexpr (std::is_unsigned_v<T2> && std::is_signed_v<T1>) {
+				if (actual < 0) {
+					return;
+				} else if (actual == (T2)expected) {
+					throw AssertNotEqualsException(expected, actual, message);
+				}
+			} else {
+				if (expected == actual) {
+					throw AssertNotEqualsException(expected, actual, message);
+				}
 			}
 		}
 
@@ -703,6 +792,7 @@ export namespace Testing {
 
 		template<std::equality_comparable T>
 		static void notEquals(T actual, T expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual) && std::isnan(expected)) {
 					return;
@@ -718,10 +808,11 @@ export namespace Testing {
 
 		template<typename T> requires requires (const std::remove_reference_t<T>& a, const std::remove_reference_t<T>& b) {
 			{ a - b }->std::convertible_to<T>;
-			{ a < b } -> std::_Boolean_testable;
-			{ a > b } -> std::_Boolean_testable;
+			{ a < b } -> std::convertible_to<bool>;
+			{ a > b } -> std::convertible_to<bool>;
 		}
 		static void notEquals(T tolerance, T actual, T expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual) && std::isnan(expected)) {
 					return;
@@ -738,10 +829,11 @@ export namespace Testing {
 
 		template<typename T1, typename T2> requires requires (const std::remove_reference_t<T1>& a, const std::remove_reference_t<T2>& b) {
 			{ a - b } -> std::convertible_to<std::common_type_t<T1, T2>>;
-			{ a < b } -> std::_Boolean_testable;
-			{ a > b } -> std::_Boolean_testable;
+			{ a < b } -> std::convertible_to<bool>;
+			{ a > b } -> std::convertible_to<bool>;
 		}
 		static void notEquals(std::common_type_t<T1, T2> tolerance, T1 actual, T2 expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T1> && !std::is_floating_point_v<T2>) {
 				if (std::isnan(actual)) {
 					return;
@@ -776,6 +868,7 @@ export namespace Testing {
 
 		template<CouldBeCompared T>
 		static void less(T actual, T expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual) || std::isnan(expected)) {
 					throw AssertLessException(expected, actual, message);
@@ -788,6 +881,7 @@ export namespace Testing {
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void less(T actual, To expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual)) {
 					throw AssertLessException(expected, actual, message);
@@ -805,6 +899,7 @@ export namespace Testing {
 
 		template<CouldBeCompared T>
 		static void lessOrEqual (T actual, T expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual) || std::isnan(expected)) {
 					throw AssertLessException(expected, actual, message);
@@ -817,6 +912,7 @@ export namespace Testing {
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void lessOrEqual(T actual, To expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual)) {
 					throw AssertLessException(expected, actual, message);
@@ -834,6 +930,7 @@ export namespace Testing {
 
 		template<CouldBeCompared T>
 		static void greater(T actual, T expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual)) {
 					throw AssertLessException(expected, actual, message);
@@ -846,6 +943,7 @@ export namespace Testing {
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void greater(T actual, To expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual)) {
 					throw AssertLessException(expected, actual, message);
@@ -863,6 +961,7 @@ export namespace Testing {
 
 		template<CouldBeCompared T>
 		static void greaterOrEqual(T actual, T expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual) || std::isnan(expected)) {
 					throw AssertLessException(expected, actual, message);
@@ -875,6 +974,7 @@ export namespace Testing {
 
 		template<typename T, CouldBeComparedTo<T> To>
 		static void greaterOrEqual(T actual, To expected, std::string message = {}) noexcept(false) {
+			// floating point special cases
 			if constexpr (std::is_floating_point_v<T>) {
 				if (std::isnan(actual)) {
 					throw AssertLessException(expected, actual, message);
@@ -892,7 +992,7 @@ export namespace Testing {
 
 	public:
 		/*
-		* Never throws BaseException, throws std::nested_exception or IgnoredException
+		* Never throws BaseException, throws std::nested_exception or CollectedException
 		*/
 		template<typename _It, typename _Func, bool t_CaptureAllExceptions = false>
 		static void forEach(_It from, _It to, _Func applyable) noexcept(false) {
@@ -913,8 +1013,16 @@ export namespace Testing {
 				}
 			}
 			if (!capturedExceptions.empty()) {
-				throw IgnoredException(capturedExceptions);
+				throw CollectedException(capturedExceptions);
 			}
+		}
+
+		/*
+		* Never throws BaseException, throws std::nested_exception or CollectedException
+		*/
+		template<bool t_CaptureAllExceptions, typename _It, typename _Func>
+		static void forEach(_It from, _It to, _Func applyable) noexcept(false) {
+			forEach<_It, _Func, t_CaptureAllExceptions>(from, to, applyable);
 		}
 
 	// ************************************************ Or ***************************************************

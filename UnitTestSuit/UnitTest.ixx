@@ -1,11 +1,16 @@
 module;
 
-#include <format>
-#include <functional>
-#include <concepts>
-#include <string>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <format>
+//#include <functional>
+//#include <concepts>
+//#include <string>
+//#pragma warning( pop )
 
 export module Testing:UnitTest;
+
+import std;
 
 import :Interfaces;
 import :TestContext;

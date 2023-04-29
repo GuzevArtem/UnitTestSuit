@@ -1,13 +1,18 @@
 module;
 
-#include <string>
-#include <exception>
-#include <vector>
-#include <array>
-#include <any>
-#include <type_traits>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <string>
+//#include <exception>
+//#include <vector>
+//#include <array>
+//#include <any>
+//#include <type_traits>
+//#pragma warning( pop )
 
 export module Testing:TestContext;
+
+import std;
 
 import :Interfaces;
 import :TestException;
@@ -17,8 +22,8 @@ export namespace Testing {
 	export class TestContext : public TestContextInterface {
 	private:
 		mutable UnitTestInterface* m_owner;
-		TestState m_state;
 		std::vector<std::any> m_controlledObjects;
+		TestState m_state;
 
 	public:
 		inline TestContext(UnitTestInterface* owner) : m_owner(owner) {}
@@ -74,38 +79,38 @@ export namespace Testing {
 			m_state = Ignored;
 		}
 
-		virtual void processException(const TestException& e) override {
+		virtual void processException(const TestException&) override {
 			m_state = Failed;
 		}
 
-		virtual void processException(const std::exception& e) override {
+		virtual void processException(const std::exception&) override {
 			m_state = Crashed;
 		}
 
-		virtual void terminate(const std::exception& e) override {
+		virtual void terminate(const std::exception&) override {
 			m_state = Crashed;
 		}
 
 	public:
 		virtual void log(std::string&& data, bool immediate = true) const override {
 			if (!m_owner) {
-				throw "Invalid TestContext! Owner must be not null!";
+				throw std::exception("Invalid TestContext! Owner must be not null!");
 			}
 			if (m_owner->view()) {
 				m_owner->view()->addEntry(ViewLevel::info, data);
 				if (immediate) {
-					m_owner->view()->print();
+					m_owner->view()->update();
 				}
 			}
 		}
 		virtual void log(const std::string& data, bool immediate = true) const override {
 			if (!m_owner) {
-				throw "Invalid TestContext! Owner must be not null!";
+				throw std::exception("Invalid TestContext! Owner must be not null!");
 			}
 			if (m_owner->view()) {
 				m_owner->view()->addEntry(ViewLevel::info, data);
 				if (immediate) {
-					m_owner->view()->print();
+					m_owner->view()->update();
 				}
 			}
 		}

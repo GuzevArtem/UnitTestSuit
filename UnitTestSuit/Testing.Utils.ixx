@@ -1,19 +1,24 @@
 module;
 
-#include <utility>
-#include <concepts>
-#include <array>
-#include <string>
-#include <string_view>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <utility>
+//#include <concepts>
+//#include <array>
+//#include <string>
+//#include <string_view>
+//#pragma warning( pop )
 
 export module Testing.Utils;
 
 export import :FunctionWrapper;
 
+import std;
+
 import TypeParse;
 
 export namespace utils {
-	constexpr int str_length(const char* str) {
+	constexpr size_t str_length(const char* str) {
 		return (str && *str) ? 1 + str_length(str + 1) : 0;
 	}
 

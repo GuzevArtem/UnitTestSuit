@@ -10,11 +10,12 @@ Add
 ```
 to your test class if related "unresolved external symbol" error occurred.
 Should be fixed after c++23 standard library module appearance.
+Stacktraces will be available in c\++23.
 
 ## Usage
 
 > * c++20 or newer required.
-> * Module support required
+> * Module support required.
 
 ### Add to project
 

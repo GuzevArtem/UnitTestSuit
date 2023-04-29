@@ -1,11 +1,17 @@
-#include <format>
-#include <chrono>
 
-#include <stacktrace>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <format>
+//#include <chrono>
+//#pragma warning( pop )
+
+import std.compat;
 
 import Testing;
 import TypeParse;
 
+#pragma warning( push )
+#pragma warning( disable : 4100 ) // warning C4100: unreferenced formal parameter
 namespace Testing {
 
 	constexpr bool PRINT_IGNORED_EXCEPTIONS = false;
@@ -47,7 +53,7 @@ namespace Testing {
 			for (size_t i = 0; i < 5; ++i) {
 				objects[i] = { (Type)i };
 			}
-			Assert::forEach(objects.begin(), objects.end(), [](Type& item) -> void {
+			Assert::forEach<true>(objects.begin(), objects.end(), [](Type& item) -> void {
 				Assert::notEquals(item, -1);
 			});
 		}
@@ -247,6 +253,7 @@ namespace Testing {
 		}
 	};
 }
+#pragma warning( pop ) // C4100
 
 int main() {
 	Testing::TestSuit suit;

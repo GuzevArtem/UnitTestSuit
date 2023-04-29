@@ -1,13 +1,18 @@
 module;
 
-#include <string>
-#include <format>
-#include <iostream>
-#include <vector>
-#include <ranges>
-#include <string_view>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <string>
+//#include <format>
+//#include <iostream>
+//#include <vector>
+//#include <ranges>
+//#include <string_view>
+//#pragma warning( pop )
 
 export module Testing:TestView;
+
+import std;
 
 import :Interfaces;
 
@@ -15,34 +20,28 @@ export namespace Testing {
 
 	export
 	class TestViewBase : public TestViewInterface {
-	public:
-
 	private:
 		std::vector<const TestViewInterface*> m_childs;
 		TestViewInterface* m_parent;
-		size_t m_indent;
-		std::string m_indentString;
 
 	public:
-		inline TestViewBase() : TestViewBase(nullptr, std::string("\t")) {}
-		inline TestViewBase(TestViewInterface* parent) : TestViewBase(parent, std::string("\t")) {}
-		inline TestViewBase(std::string indentString) : TestViewBase(nullptr, indentString) {}
-		inline TestViewBase(TestViewInterface* parent, std::string indentString) : m_parent(parent), m_indentString(indentString) {
+		inline TestViewBase(TestViewInterface* parent) : m_parent(parent) {
 			if (parent) {
 				parent->registerSelf(this);
 			}
 		}
-
-		~TestViewBase() {
+		virtual ~TestViewBase() noexcept {
 			for (auto child : m_childs) {
 				delete child;
 			}
 		}
+
 	public:
+		[[nodiscard]]
 		virtual TestViewInterface* parent() const override { return m_parent; }
 		virtual void parent(TestViewInterface* parent) override {
 			if (this == parent) {
-				throw "TestViewInterface: Trying to set self as parent!";
+				throw std::exception("TestViewInterface: Trying to set self as parent!");
 			}
 
 			if (m_parent) {
@@ -66,37 +65,104 @@ export namespace Testing {
 				m_childs.push_back(child);
 			}
 		}
+		[[nodiscard]]
 		virtual TestViewInterface* clone(TestViewInterface* target) const override {
-			if (!target) {
-				return nullptr;
-			}
-
-			TestViewBase* asBase = static_cast<TestViewBase*>(target);
-
-			asBase->m_indent = this->m_indent;
-			asBase->m_indentString = this->m_indentString;
-
-			return asBase;
+			// do not clone parent
+			return dynamic_cast<TestViewBase*>(target);
 		}
 
-	protected:
-		virtual void indent() override { indent(1); }
-		virtual void indent(size_t count) override { m_indent += count; }
-		virtual void unindent() override { unindent(1); }
-		virtual void unindent(size_t count) override { m_indent = (m_indent > count ? (m_indent - count) : 0); }
+	public:
+		virtual void onBeforeTest() override {}
+		virtual void onAfterTest() override {}
+		virtual void onBeforeAllTests() override {}
+		virtual void onAfterAllTests() override {}
 
-		virtual size_t indentValue() const { return m_indent; }
-		virtual std::string indentString() const { return m_indentString; }
+		virtual void startBlock() override {}
+		virtual void endBlock() override {}
+
+	public:
+		virtual bool needUpdate() const override { return true; }
 	};
 
 	export
-	class TestViewConsole : public TestViewBase {
+	class TestViewTextBase : public TestViewBase {
 		typedef TestViewBase inherited;
 
+	private:
+		size_t m_indent;
+		std::string m_indentString;
+
+	public:
+		inline TestViewTextBase() : TestViewTextBase(nullptr, std::string("\t")) {}
+		inline TestViewTextBase(TestViewInterface* parent) : TestViewTextBase(parent, std::string("\t")) {}
+		inline TestViewTextBase(std::string indentString) : TestViewTextBase(nullptr, indentString) {}
+		inline TestViewTextBase(TestViewInterface* parent, std::string indentString) : inherited(parent), m_indentString(indentString), m_indent(0) {}
+
+	public:
+		[[nodiscard]]
+		virtual TestViewInterface* clone(TestViewInterface* target) const override {
+			TestViewInterface* asBase = inherited::clone(target);
+			TestViewTextBase* asTextBase = dynamic_cast<TestViewTextBase*>(asBase);
+
+			if (!asTextBase) {
+				return nullptr;
+			}
+
+			asTextBase->m_indent = this->m_indent;
+			asTextBase->m_indentString = this->m_indentString;
+
+			return asTextBase;
+		}
+
+	protected:
+		virtual void indent() { indent(1); }
+		virtual void indent(size_t count) { m_indent += count; }
+		virtual void unindent() { unindent(1); }
+		virtual void unindent(size_t count) { m_indent = (m_indent > count ? (m_indent - count) : 0); }
+
+		[[nodiscard]]
+		virtual size_t indentValue() const { return m_indent; }
+		[[nodiscard]]
+		virtual std::string indentString() const { return m_indentString; }
+
+	public:
+		virtual void onBeforeTest() override {
+			inherited::onBeforeTest();
+			startBlock();
+		}
+		virtual void onAfterTest() override {
+			endBlock();
+			inherited::onAfterTest();
+		}
+
+		virtual void onBeforeAllTests() override {
+			inherited::onBeforeAllTests();
+			//startBlock();
+		}
+		virtual void onAfterAllTests() override {
+			//endBlock();
+			inherited::onAfterAllTests();
+		}
+
+		virtual void startBlock() {
+			inherited::startBlock();
+			indent();
+		}
+		virtual void endBlock() {
+			unindent();
+			inherited::endBlock();
+		}
+	};
+
+	export
+	class TestViewConsole : public TestViewTextBase {
+		typedef TestViewTextBase inherited;
+
+	private:
 		struct Entry {
 			std::string data;
-			ViewLevel level;
 			size_t indent;
+			ViewLevel level;
 		};
 
 	private:
@@ -105,18 +171,27 @@ export namespace Testing {
 		std::vector<Entry> m_entries;
 
 	public:
-		inline TestViewConsole() : TestViewBase(nullptr, "\t"), m_entryIndex(0) {}
-		inline TestViewConsole(TestViewInterface* parent) : TestViewBase(parent, "\t"), m_entryIndex(0) {}
-		inline TestViewConsole(std::string indentValue) : TestViewBase(nullptr, indentValue), m_entryIndex(0) {}
-		inline TestViewConsole(TestViewInterface* parent, std::string indentValue) : TestViewBase(parent, indentValue), m_entryIndex(0) {}
+		inline TestViewConsole() : inherited(nullptr, "\t"), m_entryIndex(0) {}
+		inline TestViewConsole(TestViewInterface* parent) : inherited(parent, "\t"), m_entryIndex(0) {}
+		inline TestViewConsole(std::string indentValue) : inherited(nullptr, indentValue), m_entryIndex(0) {}
+		inline TestViewConsole(TestViewInterface* parent, std::string indentValue) : inherited(parent, indentValue), m_entryIndex(0) {}
 
 	public:
+		virtual TestViewInterface* clone(TestViewInterface* target) const override {
+			TestViewConsole* asConsole = dynamic_cast<TestViewConsole*>(target);
+			if (!asConsole) {
+				asConsole = new TestViewConsole();
+			}
+			return inherited::clone(asConsole);
+		}
+
+	private:
 		void addMultilineEntry(const ViewLevel level, const std::string& multiline, const bool appendFirstLine = false, size_t maxLines = static_cast<size_t>(-1)) {
 			const std::string_view lines{multiline};
 			const std::string_view delim{"\n"};
 
 			size_t linesAdded = 0;
-			for (const auto line : std::views::split(lines, delim)) {
+			for (const auto line : std::views::split(lines, delim)) { // TODO!
 				if (linesAdded > maxLines) {
 					break;
 				}
@@ -133,56 +208,31 @@ export namespace Testing {
 			addMultilineEntry(level, multiline, m_entryIndex != m_entries.size(), maxLines);
 		}
 
-		virtual void append(const ViewLevel level, const std::string& appendix, const bool multiline, size_t maxLines) override {
+	public:
+		virtual void append(const ViewLevel level, const std::string& data, const bool multiline = false, size_t maxLines = static_cast<size_t>(-1)) override {
 			if (m_entryIndex == m_entries.size()) {
-				addEntry(level, appendix, multiline, maxLines);
+				addEntry(level, data, multiline, maxLines);
 			} else {
 				if (multiline) {
-					appendMultilineEntry(level, appendix, maxLines);
+					appendMultilineEntry(level, data, maxLines);
 				} else {
-					Entry& entry = m_entries.back();
-					entry.data.append(appendix);
-				}
-			}
-		}
-
-		virtual void append(const ViewLevel level, std::string&& appendix, const bool multiline, size_t maxLines) override {
-			if (m_entryIndex == m_entries.size()) {
-				addEntry(level, appendix, multiline, maxLines);
-			} else {
-				if (multiline) {
-					appendMultilineEntry(level, appendix, maxLines);
-				} else {
-					Entry& entry = m_entries.back();
-					entry.data.append(appendix);
-					if (entry.level < level) {
-						entry.level = level;
+					Entry& e = m_entries.back();
+					e.data.append(data);
+					if (e.level < level) {
+						e.level = level;
 					}
 				}
 			}
 		}
 
-		virtual void addEntry(const ViewLevel level, const std::string& entry, const bool multiline, size_t maxLines) override {
+		virtual void addEntry(const ViewLevel level, const std::string& data, const bool multiline = false, size_t maxLines = static_cast<size_t>(-1)) override {
 			if (multiline) {
-				addMultilineEntry(level, entry, false, maxLines);
+				addMultilineEntry(level, data, false, maxLines);
 			} else {
 				Entry e;
 				e.level = level;
 				e.data = std::string(m_indentPrefix);
-				e.data = e.data.append(entry);
-				e.indent = indentValue();
-				m_entries.emplace_back(std::move(e));
-			}
-		}
-
-		virtual void addEntry(const ViewLevel level, std::string&& entry, const bool multiline, size_t maxLines) override {
-			if (multiline) {
-				addMultilineEntry(level, entry, false, maxLines);
-			} else {
-				Entry e;
-				e.level = level;
-				e.data = std::string(m_indentPrefix);
-				e.data = e.data.append(entry);
+				e.data = e.data.append(data);
 				e.indent = indentValue();
 				m_entries.emplace_back(std::move(e));
 			}
@@ -206,14 +256,29 @@ export namespace Testing {
 			std::flush(std::cerr);
 		}
 
-		virtual void print() override {
-			while (m_entryIndex < m_entries.size()) {
+	public:
+		[[nodiscard]]
+		virtual bool needUpdate() const {
+			return !m_entries.empty() && m_entryIndex < m_entries.size();
+		}
+		virtual void update() override {
+			while (needUpdate()) {
 				const Entry& entry = m_entries[m_entryIndex];
 				outStream(entry.level) << std::format("{}\n", entry.data);
 				++m_entryIndex;
 			}
 			flushStreams();
 		}
+
+		virtual void clear() override {
+			m_entries.clear();
+			m_indentPrefix.clear();
+			m_entryIndex = 0;
+		}
+
+	protected:
+		using inherited::indent; // prevent function 'hiding'
+		using inherited::unindent; // prevent function 'hiding'
 
 		virtual void indent(size_t count) override { 
 			inherited::indent(count);
@@ -229,20 +294,5 @@ export namespace Testing {
 				m_indentPrefix.append(indentString());
 			}
 		}
-
-		virtual void clear() override {
-			m_entries.clear();
-			m_indentPrefix.clear();
-			m_entryIndex = 0;
-		}
-
-		virtual TestViewInterface* clone(TestViewInterface* target) const override {
-			if (!target) {
-				target = new TestViewConsole();
-			}
-			return inherited::clone(target);
-		}
-	public:
-		static TestViewInterface* create() { return new TestViewConsole(); }
 	};
 }

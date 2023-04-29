@@ -1,12 +1,17 @@
 module;
 
-#include <format>
-#include <concepts>
-#include <vector>
-#include <algorithm>
-#include <chrono>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <format>
+//#include <concepts>
+//#include <vector>
+//#include <algorithm>
+//#include <chrono>
+//#pragma warning( pop )
 
 export module Testing:TestSuit;
+
+import std;
 
 import :Interfaces;
 import :TestView;
@@ -15,17 +20,17 @@ import :TestClass;
 export namespace Testing {
 
 	template<typename T>
-	concept TestClassType = !std::same_as<T, TestClassInterface> && std::is_base_of_v<TestClassInterface, T>;
-
+	concept TestClassType = std::same_as<T, std::remove_pointer_t<T>> && !std::same_as<T, TestClassInterface> && std::is_base_of_v<TestClassInterface, T>;
 
 	template<typename T, auto... args, template<typename T, auto... args> typename ClassType>
-	concept TestClassTemplateArgumentedType = !std::same_as<ClassType<T, args...>, TestClassInterface>&& std::is_base_of_v<TestClassInterface, ClassType<T, args...>>;
+	concept TestClassTemplateArgumentedType = std::same_as<T, std::remove_pointer_t<T>> && !std::same_as<ClassType<T, args...>, TestClassInterface> && std::is_base_of_v<TestClassInterface, ClassType<T, args...>>;
 
 	export
 	class TestSuit {
 	public:
-		constexpr TestSuit(TestViewInterface* view = TestViewConsole::create()) : m_view(view), m_registeredTestClasses(0), m_testClasses() {}
-		constexpr virtual ~TestSuit() {
+		TestSuit() : TestSuit(new TestViewConsole()) {}
+		TestSuit(TestViewInterface* view) : m_view(view), m_registeredTestClasses(0), m_testClasses() {}
+		virtual ~TestSuit() {
 			for (TestClassInterface* testClass : m_testClasses) {
 				delete testClass;
 			}
@@ -54,12 +59,12 @@ export namespace Testing {
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format("___________________ TEST RUN STARTED ______________________"));
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
-			m_view->print();
+			m_view->update();
 			const auto start_time = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
 			const std::chrono::steady_clock::time_point start_at = std::chrono::steady_clock::now();
 			for (TestClassInterface* cls : m_testClasses) {
 				if (!cls) {
-					throw "TestSuit::run() Trying to run (null) as TestClass!";
+					throw std::exception("TestSuit::run() Trying to run (null) as TestClass!");
 				}
 				bool tearingDownStarted = false;
 				try {
@@ -82,7 +87,7 @@ export namespace Testing {
 						break;
 					}
 				}
-				m_view->print();
+				m_view->update();
 				++finishedClassCount;
 				totalTestsCount += cls->getTotalTestsCount();
 				succeededTestsCount += cls->getCompletedTestsCount();
@@ -104,30 +109,30 @@ export namespace Testing {
 			m_view->append(ViewLevel::info, std::format("{} ", std::chrono::duration_cast<std::chrono::minutes>(total_time) % std::chrono::hours(1)));
 			m_view->append(ViewLevel::info, std::format("{} ", std::chrono::duration_cast<std::chrono::seconds>(total_time) % std::chrono::minutes(1)));
 			m_view->append(ViewLevel::info, std::format("{} ", std::chrono::duration_cast<std::chrono::milliseconds>(total_time) % std::chrono::seconds(1)));
-			m_view->indent();
+			m_view->startBlock();
 			m_view->addEntry(ViewLevel::info, std::format("Total completed tests count: {}/{}", succeededTestsCount, totalTestsCount));
 			m_view->addEntry(ViewLevel::info, std::format("Total failed tests count:    {}/{}", failedTestsCount, totalTestsCount));
 			m_view->addEntry(ViewLevel::info, std::format("Total ignored tests count:   {}/{}", ignoredTestsCount, totalTestsCount));
 			m_view->addEntry(ViewLevel::info, std::format("Total stopped tests count:   {}", stoppedTestsCount, totalTestsCount));
-			m_view->unindent();
+			m_view->endBlock();
 			m_view->addEntry(ViewLevel::info, std::format("___________________________________________________________"));
 			m_view->addEntry(ViewLevel::info, std::format(""));
-			m_view->print();
+			m_view->update();
 
 			for (TestClassInterface* cls : m_testClasses) {
-				if (cls->countTestFailed() > 0) {
-					forEachFailedTestOf(cls);
+				if (cls && cls->countTestFailed() > 0) {
+					forEachFailedTestOf(*cls);
 				}
 			}
 		}
 
-		virtual void forEachFailedTestOf(TestClassInterface* cls) {
-			m_view->addEntry(ViewLevel::info, std::format("Class \"{}\" has {} failed tests:", cls->name(), cls->countTestFailed()));
-			m_view->indent();
-			for (auto test : cls->getAllTests()) {
+		virtual void forEachFailedTestOf(const TestClassInterface& cls) {
+			m_view->addEntry(ViewLevel::info, std::format("Class \"{}\" has {} failed tests:", cls.name(), cls.countTestFailed()));
+			m_view->startBlock();
+			for (auto test : cls.getAllTests()) {
 				if (test->getState() == TestState::Failed || test->getState() == TestState::Crashed) {
 					m_view->addEntry(ViewLevel::info, std::format("Test \"{}\":\t", test->name()));
-					m_view->indent();
+					m_view->startBlock();
 					const std::string errorMessage = test->errorMessage();
 					m_view->addEntry(ViewLevel::info, errorMessage, true, m_errorLinesToPrint);
 					const std::string::difference_type allLines = std::count(errorMessage.begin(), errorMessage.end(), '\n');
@@ -135,17 +140,17 @@ export namespace Testing {
 					if (m_errorLinesToPrint && skippedLines > 0) {
 						m_view->addEntry(ViewLevel::info, std::format("... {} lines skipped ...", skippedLines));
 					}
-					m_view->unindent();
+					m_view->endBlock();
 				}
 			}
-			m_view->unindent();
-			m_view->print();
+			m_view->endBlock();
+			m_view->update();
 		}
 
 		/*
 		* Return false if exception is fatal and class execution should be terminated.
 		*/
-		constexpr bool processTestException(const std::exception& e) const {
+		bool processTestException(const std::exception&) const {
 			return false;
 		}
 
@@ -185,6 +190,5 @@ export namespace Testing {
 				registerArgumentedClass<ArgumentedTemplatedTestClass, ClassType, args...>();
 			}
 		}
-
 	};
 }

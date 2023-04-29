@@ -51,6 +51,9 @@
 # Visual studio files
 .vs/**/*.*
 
+# preprocessed
+**/*.i
+
 # Custom
 UnitTestSuit.vcxproj.FileListAbsolute.txt
 *.exp

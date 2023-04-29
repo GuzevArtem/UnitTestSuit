@@ -1,17 +1,20 @@
 module;
 
-#include <chrono>
-#include <type_traits>
-#include <format>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <chrono>
+//#include <type_traits>
+//#include <format>
+//#pragma warning( pop )
 
 export module Testing:Benchmark;
+
+import std;
 
 export namespace Testing {
 
 #pragma optimize("", off)
-
 	inline void compiler_must_force_sink(void const*) {}
-
 #pragma optimize("", on)
 
 	export struct compiler_must_not_elide_fn {
@@ -37,12 +40,14 @@ export namespace Testing {
 		};
 
 		template<typename _Func, typename ...Args>
-		static [[nodiscard]] std::enable_if_t<std::is_invocable_v<_Func, Args...>, Result> function(_Func&& func, Args&&... args) {
+		[[nodiscard]]
+		static std::enable_if_t<std::is_invocable_v<_Func, Args...>, Result> function(_Func&& func, Args&&... args) {
 			return function<_Func, Args...>(1, std::forward<_Func>(func), std::forward<Args>(args)...);
 		}
 
 		template<typename _Func, typename ...Args>
-		static [[nodiscard]] std::enable_if_t<std::is_invocable_v<_Func, Args...>, Result> function(const size_t iterations, _Func&& func, Args&&... args) {
+		[[nodiscard]]
+		static std::enable_if_t<std::is_invocable_v<_Func, Args...>, Result> function(const size_t iterations, _Func&& func, Args&&... args) {
 			std::vector<std::chrono::steady_clock::time_point> intermidiate_results;
 			intermidiate_results.reserve(iterations*2);
 			for (size_t i = 0; i < iterations; ++i) {
@@ -128,9 +133,8 @@ struct std::formatter<Testing::Benchmark::Result> {
 	}
 
 	auto format(const Testing::Benchmark::Result& obj, std::format_context& ctx) {
-
+		const bool silent = flags & e_silent;
 		if (!flags || (flags == e_silent)) {
-			bool silent = flags & e_silent;
 			return std::format_to(ctx.out(),
 								  "{}{:>8}, "
 								  "{}{}, "
@@ -146,7 +150,6 @@ struct std::formatter<Testing::Benchmark::Result> {
 
 		auto output = ctx.out();
 		bool require_comma = false;
-		bool silent = flags & e_silent;
 		if (flags & e_iterations) {
 			output = std::format_to(ctx.out(), "{}{}{:>8}", require_comma ? ", " : "", silent ? "" : "iterations=", obj.iterations);
 			require_comma = true;
@@ -173,8 +176,8 @@ struct std::formatter<Testing::Benchmark::Result> {
 };
 
 // TODO: VSO-1582358 WA until standard library modules will be used
-namespace std::chrono {
-	export
-	template <class _Ty>
-	[[nodiscard]] tm _Fill_tm(const _Ty& _Val);
-}
+//namespace std::chrono {
+//	export
+//	template <class _Ty>
+//	[[nodiscard]] tm _Fill_tm(const _Ty& _Val);
+//}

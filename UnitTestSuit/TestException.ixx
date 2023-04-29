@@ -1,16 +1,39 @@
 module;
 
-#include <format>
-#include <vector>
-#include <exception>
-#include <string>
-#include <stacktrace>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <string>
+//
+//#if !defined(_HAS_CXX23) || !_HAS_CXX23
+//#pragma warning( push )
+//#pragma warning( disable : 5202 ) // warning C5202: a global module fragment can only contain preprocessor directives
+//namespace std {
+//	class stacktrace {
+//	public:
+//		static stacktrace current(size_t framesToSkip = 0) {
+//			return {};
+//		}
+//	};
+//
+//	std::string to_string(stacktrace trace) {
+//		return "C++23 required for stacktrace!";
+//	}
+//}
+//#pragma warning( pop )
+//#else 
+//#include <stacktrace>
+//#endif
+//
+//#include <format>
+//#include <vector>
+//#include <exception>
+//#pragma warning( pop )
 
 export module Testing:TestException;
 
-export namespace Testing {
+import std;
 
-	export size_t InitialStackTraceDepth = 8;
+export namespace Testing {
 
 	export class BaseException : public std::exception {
 		typedef std::exception inherited;
@@ -22,11 +45,12 @@ export namespace Testing {
 		BaseException(const std::exception& caused) : inherited(caused) {}
 
 		[[nodiscard]] virtual std::string reason() const {
-			return std::format("{}: {}", inherited::what(), std::to_string(where<2>()));
+			const std::stacktrace trace = where<2>();
+			return std::format("{}: {}", inherited::what(), std::to_string(trace));
 		};
 
 		template<size_t t_StackToSkip = 0>
-		[[nodiscard]] std::stacktrace where() const {
+		[[nodiscard]] std::stacktrace where() const noexcept {
 			return std::stacktrace::current(t_StackToSkip);
 		}
 	};
@@ -51,35 +75,52 @@ export namespace Testing {
 			return std::format("UnexpectedException: caused by {}", inherited::what());
 		}
 
-		[[nodiscard]] virtual std::stacktrace where() const {
+		[[nodiscard]] virtual std::stacktrace where() const noexcept {
 			return std::stacktrace::current();
 		}
 	};
 
-	export class IgnoredException : public BaseException {
+	export class CollectedException : public BaseException {
 		typedef BaseException inherited;
 	private:
 		std::vector<BaseException> m_caused;
 		std::string m_message;
 	public:
-		IgnoredException(const std::string& message = {}) : m_message(message), m_caused() {}
-		IgnoredException(const std::vector<BaseException>& caused, const std::string& message = {}) : m_message(message), m_caused(caused) {}
+		CollectedException(const std::string& message = {}) : m_caused(), m_message(message) {}
+		CollectedException(const std::vector<BaseException>& caused, const std::string& message = {}) : m_caused(caused), m_message(message) {}
+
+		virtual const char* name() const { return "CollectedException"; }
 
 		[[nodiscard]] virtual std::string reason() const {
-			std::string result = std::format("\n{}{}{}IgnoredException{}", m_message.size() ? "Message:\t" : "" , m_message, m_message.size() ? "\n" : "", m_caused.empty() ? ": Execution skipped!" : ":");
+			std::string result = std::format("\n{}{}{}{}{}",
+											 m_message.size() ? "Message:\t" : "" ,
+											 m_message,
+											 m_message.size() ? "\n" : "",
+											 name(),
+											 m_caused.empty() ? ": Execution skipped!" : ":");
 			for (BaseException e : m_caused) {
-				result.append(std::format("\nCaused by: {}", e.reason()));
+				result.append(std::format("\n\nCaused by: {}", e.reason()));
 			}
 			return result;
 		}
 
-		[[nodiscard]] bool hasAny() const {
+		[[nodiscard]] bool hasAny() const noexcept {
 			return !m_caused.empty();
 		}
 
-		[[nodiscard]] virtual std::stacktrace where() const {
+		[[nodiscard]] virtual std::stacktrace where() const noexcept {
 			return std::stacktrace::current();
 		}
+	};
+
+	export class IgnoredException : public CollectedException {
+		typedef CollectedException inherited;
+
+	public:
+		IgnoredException(const std::string& message = {}) : CollectedException(message) {}
+		IgnoredException(const std::vector<BaseException>& caused, const std::string& message = {}) : CollectedException(caused, message) {}
+
+		virtual const char* name() const override { return "IgnoredException"; }
 	};
 
 	export class TestStopException : public BaseException {
@@ -100,7 +141,7 @@ export namespace Testing {
 			}
 		}
 
-		[[nodiscard]] virtual std::stacktrace where() const {
+		[[nodiscard]] virtual std::stacktrace where() const noexcept {
 			return std::stacktrace::current();
 		}
 	};

@@ -1,14 +1,19 @@
 module;
 
-#include <format>
-#include <string>
-#include <string_view>
-#include <array>
-#include <vector>
-#include <map>
-#include <exception>
+//#pragma warning( push )
+//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
+//#include <format>
+//#include <string>
+//#include <string_view>
+//#include <array>
+//#include <vector>
+//#include <map>
+//#include <exception>
+//#pragma warning( pop )
 
 export module Testing:TestClass;
+
+import std;
 
 import :Interfaces;
 import :TestView;
@@ -47,19 +52,19 @@ export namespace Testing {
 	template<typename Self>
 		class TestClassInner : public TestClassInterface {
 	private:
-		TestViewInterface* m_view = TestViewConsole::create();
+		mutable TestViewInterface* m_view;
 
 		std::string m_name;
 		TestData m_data;
-		std::vector<UnitTestInterface*> m_unitTests;
+		mutable std::vector<UnitTestInterface*> m_unitTests;
 	public:
-		constexpr TestClassInner(const char* name) : m_name(name) {}
-		constexpr TestClassInner(const std::string_view& name) : m_name(name) {}
-		constexpr TestClassInner(std::string_view&& name) : m_name(name) {}
-		constexpr TestClassInner(const std::string& name) : m_name(name) {}
-		constexpr TestClassInner(std::string&& name) : m_name(name) {}
-		constexpr TestClassInner(const utils::string_static& name) : m_name(std::to_string(name)) {}
-		constexpr TestClassInner(utils::string_static&& name) : m_name(std::to_string(name)) {}
+		constexpr TestClassInner(const char* name) : m_name(name), m_view(nullptr) {}
+		constexpr TestClassInner(const std::string_view& name) : m_name(name), m_view(nullptr) {}
+		constexpr TestClassInner(std::string_view&& name) : m_name(name), m_view(nullptr) {}
+		constexpr TestClassInner(const std::string& name) : m_name(name), m_view(nullptr) {}
+		constexpr TestClassInner(std::string&& name) : m_name(name), m_view(nullptr) {}
+		constexpr TestClassInner(const utils::string_static& name) : m_name(std::to_string(name)), m_view(nullptr) {}
+		constexpr TestClassInner(utils::string_static&& name) : m_name(std::to_string(name)), m_view(nullptr) {}
 
 		constexpr virtual ~TestClassInner() {
 			for (UnitTestInterface* test : m_unitTests) {
@@ -69,7 +74,7 @@ export namespace Testing {
 
 		virtual void setView(TestViewInterface* view) override {
 			if (m_view) {
-				m_view->print();
+				m_view->update();
 				if (!m_view->parent()) {
 					delete m_view;
 				}
@@ -78,7 +83,12 @@ export namespace Testing {
 				m_view = view;
 			}
 		}
-		virtual TestViewInterface* view() const override { return m_view; }
+		virtual TestViewInterface* view() const override {
+			if (!m_view) {
+				m_view = new TestViewConsole();
+			}
+			return m_view;
+		}
 
 
 		virtual void throwIfNotUniqueTestName(char const* name) noexcept(false) override {
@@ -89,11 +99,15 @@ export namespace Testing {
 		}
 
 		constexpr virtual bool testExists(char const* name) override {
-			for (auto* test : getAllTests()) {
-				if (utils::str_equal(name, test->name())) {
-					m_view->addEntry(ViewLevel::error, std::format("Already exists! Registering test [{}] for TestClass [{}].", name, this->name()));
-					return true;
+			if (m_view) {
+				for (auto* test : getAllTests()) {
+					if (utils::str_equal(name, test->name())) {
+						m_view->addEntry(ViewLevel::error, std::format("Already exists! Registering test [{}] for TestClass [{}].", name, this->name()));
+						return true;
+					}
 				}
+			} else {
+				std::cerr << std::format("Already exists! Registering test [{}] for TestClass [{}].", name, this->name()) << std::endl;
 			}
 			return false;
 		}
@@ -108,54 +122,54 @@ export namespace Testing {
 
 	private:
 		virtual void onTestStart(const UnitTestInterface* test, TestContextInterface* ctx) override {
-			m_view->addEntry(ViewLevel::info, std::format("Starting test: [{}]", test->name()));
+			view()->addEntry(ViewLevel::info, std::format("Starting test: [{}]", test->name()));
 		}
 		virtual void onTestComplete(const UnitTestInterface* test, TestContextInterface* ctx) override {
-			m_view->append(ViewLevel::info, "\t");
-			m_view->append(ViewLevel::info, std::format("COMPLETED"));
+			view()->append(ViewLevel::info, "\t");
+			view()->append(ViewLevel::info, std::format("COMPLETED"));
 		}
 		virtual void onTestComplete(const UnitTestInterface* test, TestContextInterface* ctx, const IgnoredException& e) override {
-			m_view->append(ViewLevel::info, "\t");
-			m_view->append(ViewLevel::info, std::format("COMPLETED:"));
-			m_view->append(ViewLevel::info, "\t");
-			m_view->append(ViewLevel::info, std::format("IGNORING: "));
-			m_view->indent();
-			m_view->append(ViewLevel::warning, std::format("{}", e.reason()), true);
-			m_view->unindent();
+			view()->append(ViewLevel::info, "\t");
+			view()->append(ViewLevel::info, std::format("COMPLETED:"));
+			view()->append(ViewLevel::info, "\t");
+			view()->append(ViewLevel::info, std::format("IGNORING: "));
+			view()->startBlock();
+			view()->append(ViewLevel::warning, std::format("{}", e.reason()), true);
+			view()->endBlock();
 		}
 		virtual void onTestStop(const UnitTestInterface* test, TestContextInterface* ctx, const TestStopException& e) override {
-			m_view->append(ViewLevel::info, "\t");
-			m_view->append(ViewLevel::warning, std::format("STOPPED: "));
-			m_view->indent();
-			m_view->append(ViewLevel::warning, std::format("{}", e.reason()), true);
-			m_view->unindent();
+			view()->append(ViewLevel::info, "\t");
+			view()->append(ViewLevel::warning, std::format("STOPPED: "));
+			view()->startBlock();
+			view()->append(ViewLevel::warning, std::format("{}", e.reason()), true);
+			view()->endBlock();
 		}
 		virtual void onTestIgnore(const UnitTestInterface* test, TestContextInterface* ctx, const IgnoredException& e) override {
-			m_view->append(ViewLevel::info, "\t");
-			m_view->append(ViewLevel::warning, std::format("IGNORED: "));
-			m_view->indent();
-			m_view->append(ViewLevel::warning, std::format("{}", e.reason()), true);
-			m_view->unindent();
+			view()->append(ViewLevel::info, "\t");
+			view()->append(ViewLevel::warning, std::format("IGNORED: "));
+			view()->startBlock();
+			view()->append(ViewLevel::warning, std::format("{}", e.reason()), true);
+			view()->endBlock();
 		}
 		virtual void onTestFail(const UnitTestInterface* test, TestContextInterface* ctx, const TestException& te) override {
-			m_view->append(ViewLevel::info, "\t");
-			m_view->append(ViewLevel::error, std::format("FAIL: "));
-			m_view->indent();
-			m_view->append(ViewLevel::error, std::format("{}", te.reason()), true);
-			m_view->unindent();
+			view()->append(ViewLevel::info, "\t");
+			view()->append(ViewLevel::error, std::format("FAIL: "));
+			view()->startBlock();
+			view()->append(ViewLevel::error, std::format("{}", te.reason()), true);
+			view()->endBlock();
 		}
 		virtual void onTestFail(const UnitTestInterface* test, TestContextInterface* ctx, const std::exception& e) override {
-			m_view->append(ViewLevel::info, "\t");
-			m_view->append(ViewLevel::error, std::format("FAIL: "));
-			m_view->indent();
-			m_view->append(ViewLevel::error, std::format("{}", e.what()), true);
-			m_view->unindent();
+			view()->append(ViewLevel::info, "\t");
+			view()->append(ViewLevel::error, std::format("FAIL: "));
+			view()->startBlock();
+			view()->append(ViewLevel::error, std::format("{}", e.what()), true);
+			view()->endBlock();
 		}
 
 	public:
 		constexpr virtual char const* name() const { return m_name.c_str(); }
 
-		virtual std::vector<UnitTestInterface*>& getAllTests() override { return m_unitTests; }
+		virtual std::vector<UnitTestInterface*>& getAllTests() const override { return m_unitTests; }
 
 		virtual void processTestResult(UnitTestInterface* test) {
 			switch (test->getState()) {
@@ -191,33 +205,35 @@ export namespace Testing {
 		}
 
 		virtual void beforeTest() override {
-			m_view->indent();
+			view()->onBeforeTest();
 		}
 
 		virtual void afterTest() override {
-			m_view->unindent();
-			m_view->print();
+			view()->onAfterTest();
+			view()->update();
 		}
 
 		virtual void beforeAllTests() override {
-			m_view->addEntry(ViewLevel::info, std::format("Starting test class: [{}]", name()));
+			view()->addEntry(ViewLevel::info, std::format("Starting test class: [{}]", name()));
+			view()->onBeforeAllTests();
 		}
 
 		virtual void afterAllTests() override {
+			view()->onAfterAllTests();
 			printSummary();
 		}
 
 		virtual void printSummary() const override {
-			m_view->addEntry(ViewLevel::info, std::format("-----------------------------------------------------------"));
-			m_view->addEntry(ViewLevel::info, std::format("Class [{}] results:", name()));
-			m_view->indent();
-			m_view->addEntry(ViewLevel::info, std::format("Completed tests: {}/{}", m_data.succeededTestsCount, m_data.totalTestsCount));
-			m_view->addEntry(ViewLevel::info, std::format("Failed tests: {}/{}", m_data.failedTestsCount, m_data.totalTestsCount));
-			m_view->addEntry(ViewLevel::info, std::format("Ignored tests: {}/{}", m_data.ignoredTestsCount, m_data.totalTestsCount));
-			m_view->addEntry(ViewLevel::info, std::format("Stopped tests: {}", m_data.stoppedTestsCount, m_data.totalTestsCount));
-			m_view->unindent();
-			m_view->addEntry(ViewLevel::info, std::format("==========================================================="));
-			m_view->print();
+			view()->addEntry(ViewLevel::info, std::format("-----------------------------------------------------------"));
+			view()->addEntry(ViewLevel::info, std::format("Class [{}] results:", name()));
+			view()->startBlock();
+			view()->addEntry(ViewLevel::info, std::format("Completed tests: {}/{}", m_data.succeededTestsCount, m_data.totalTestsCount));
+			view()->addEntry(ViewLevel::info, std::format("Failed tests: {}/{}", m_data.failedTestsCount, m_data.totalTestsCount));
+			view()->addEntry(ViewLevel::info, std::format("Ignored tests: {}/{}", m_data.ignoredTestsCount, m_data.totalTestsCount));
+			view()->addEntry(ViewLevel::info, std::format("Stopped tests: {}", m_data.stoppedTestsCount, m_data.totalTestsCount));
+			view()->endBlock();
+			view()->addEntry(ViewLevel::info, std::format("==========================================================="));
+			view()->update();
 		}
 
 		virtual size_t countTestFailed() const override {
