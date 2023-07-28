@@ -1,14 +1,3 @@
-module;
-
-//#pragma warning( push )
-//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
-//#include <utility>
-//#include <concepts>
-//#include <array>
-//#include <string>
-//#include <string_view>
-//#pragma warning( pop )
-
 export module Testing.Utils;
 
 export import :FunctionWrapper;
@@ -37,7 +26,7 @@ export namespace utils {
 	public:
 		[[nodiscard]]
 		constexpr size_t next_index() const {
-			return size() == t_Capacity ? last_index() : size();
+			return (size() + 1) == t_Capacity ? last_index() : size();
 		}
 
 		[[nodiscard]]

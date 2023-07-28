@@ -1,11 +1,5 @@
 module;
 
-//#pragma warning( push )
-//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
-//#include <typeinfo>
-//#pragma warning( pop )
-
-
 #define REGISTER_PARSE_TYPE(X)\
 export\
 	template<>\
@@ -16,6 +10,7 @@ constexpr const char* resolveTypeName<X>() {\
 export module TypeParse;
 
 import std.compat;
+import <typeinfo>;
 
 export namespace helper {
 	export

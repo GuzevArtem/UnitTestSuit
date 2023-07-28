@@ -1,15 +1,3 @@
-module;
-
-//#pragma warning( push )
-//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
-//#include <string>
-//#include <format>
-//#include <iostream>
-//#include <vector>
-//#include <ranges>
-//#include <string_view>
-//#pragma warning( pop )
-
 export module Testing:TestView;
 
 import std;
@@ -187,20 +175,25 @@ export namespace Testing {
 
 	private:
 		void addMultilineEntry(const ViewLevel level, const std::string& multiline, const bool appendFirstLine = false, size_t maxLines = static_cast<size_t>(-1)) {
-			const std::string_view lines{multiline};
-			const std::string_view delim{"\n"};
-
 			size_t linesAdded = 0;
-			for (const auto line : std::views::split(lines, delim)) { // TODO!
+			for (std::string::const_iterator beg = multiline.begin(), it = multiline.begin(), end = multiline.end();; ++it) {
+				if (it != end && *it != '\n') {
+					continue; // walk to next delimiter or end of line
+				}
+				if (linesAdded == 0 && appendFirstLine) {
+					append(level, std::string(beg, it), false, 1);
+				} else {
+					addEntry(level, std::string(beg, it), false, 1);
+				}
+				++linesAdded;
 				if (linesAdded > maxLines) {
 					break;
 				}
-				if (linesAdded == 0 && appendFirstLine) {
-					append(level, std::string(line.begin(), line.end()), false, 1);
-				} else {
-					addEntry(level, std::string(line.begin(), line.end()), false, 1);
+				beg = it;
+				if (beg == end) {
+					break;
 				}
-				++linesAdded;
+				++beg;
 			}
 		}
 

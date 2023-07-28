@@ -1,13 +1,4 @@
-module;
-
-//#pragma warning( push )
-//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
-//#include <chrono>
-//#include <type_traits>
-//#include <format>
-//#pragma warning( pop )
-
-export module Testing:Benchmark;
+export module Testing.Benchmark;
 
 import std;
 
@@ -29,30 +20,39 @@ export namespace Testing {
 		}
 	};
 
+	export struct BenchmarkResult {
+		size_t iterations;
+		std::chrono::nanoseconds time_spend_in_total;
+		std::chrono::nanoseconds time_spend_in_average;
+		std::chrono::nanoseconds time_spend_at_least;
+		std::chrono::nanoseconds time_spend_at_most;
+
+		BenchmarkResult() = default;
+		BenchmarkResult(const size_t& iterations, const std::chrono::nanoseconds& time_spend_in_total, const std::chrono::nanoseconds& time_spend_in_average, const std::chrono::nanoseconds& time_spend_at_least, const std::chrono::nanoseconds& time_spend_at_most)
+			: iterations(iterations), time_spend_in_total(time_spend_in_total), time_spend_in_average(time_spend_in_average), time_spend_at_least(time_spend_at_least), time_spend_at_most(time_spend_at_most) {}
+	};
+
 	export class Benchmark {
 	public:
-		struct Result {
-			size_t iterations;
-			std::chrono::nanoseconds time_spend_in_total;
-			std::chrono::nanoseconds time_spend_in_average;
-			std::chrono::nanoseconds time_spend_at_least;
-			std::chrono::nanoseconds time_spend_at_most;
-		};
+		using Result = BenchmarkResult;
 
 		template<typename _Func, typename ...Args>
 		[[nodiscard]]
-		static std::enable_if_t<std::is_invocable_v<_Func, Args...>, Result> function(_Func&& func, Args&&... args) {
+		static auto function(_Func&& func, Args&&... args) -> std::enable_if_t<std::is_invocable_v<_Func, Args...>, Result> {
 			return function<_Func, Args...>(1, std::forward<_Func>(func), std::forward<Args>(args)...);
 		}
 
 		template<typename _Func, typename ...Args>
 		[[nodiscard]]
-		static std::enable_if_t<std::is_invocable_v<_Func, Args...>, Result> function(const size_t iterations, _Func&& func, Args&&... args) {
+		static auto function(const size_t iterations, _Func&& func, Args&&... args) -> std::enable_if_t<std::is_invocable_v<_Func, Args...>, Result> {
+			if (iterations == 0) {
+				return {};
+			}
 			std::vector<std::chrono::steady_clock::time_point> intermidiate_results;
-			intermidiate_results.reserve(iterations*2);
+			intermidiate_results.reserve(iterations * 2);
 			for (size_t i = 0; i < iterations; ++i) {
 				intermidiate_results.emplace_back(std::chrono::steady_clock::now());
-				func(args...);
+				func(std::forward<Args>(args)...);
 				intermidiate_results.emplace_back(std::chrono::steady_clock::now());
 			}
 			Result result;
@@ -61,7 +61,7 @@ export namespace Testing {
 			result.time_spend_at_least = std::chrono::nanoseconds::max();
 			result.time_spend_at_most = std::chrono::nanoseconds::zero();
 			for (size_t i = 0; i < iterations; ++i) {
-				std::chrono::nanoseconds cur_duration = intermidiate_results[2*i + 1] - intermidiate_results[2*i];
+				std::chrono::nanoseconds cur_duration = intermidiate_results[2 * i + 1] - intermidiate_results[2 * i];
 				result.time_spend_in_total += cur_duration;
 				if (cur_duration < result.time_spend_at_least) {
 					result.time_spend_at_least = cur_duration;
@@ -75,6 +75,7 @@ export namespace Testing {
 			return result;
 		}
 
+
 	public:
 		template <class T>
 		static void doNotOptimizeAway(const T& datum) {
@@ -86,45 +87,48 @@ export namespace Testing {
 
 export
 template <>
-struct std::formatter<Testing::Benchmark::Result> {
+struct std::formatter<typename Testing::Benchmark::Result> {
 
+private:
 	size_t flags = 0;
 	enum : size_t {
-		e_default		= 0,
-		e_iterations	= 1 << 0,
-		e_total			= 1 << 1,
-		e_average		= 1 << 2,
-		e_fastest		= 1 << 3,
-		e_slowest		= 1 << 4,
-		e_silent		= 1 << 31,
+		f_default = 0,
+		f_iterations = 1 << 0,
+		f_total = 1 << 1,
+		f_average = 1 << 2,
+		f_fastest = 1 << 3,
+		f_slowest = 1 << 4,
+		f_silent = 1 << 31,
 	};
 
-	constexpr auto parse(std::format_parse_context& ctx) {
+public:
+	template<class FormatContext>
+	constexpr auto parse(FormatContext& ctx) {
 		auto pos = ctx.begin();
 		while (pos != ctx.end() && *pos != '}') {
 			switch (*pos) {
 				case '#':
-					flags |= e_silent;
+					flags |= f_silent;
 					break;
 				case 'I':
 				case 'i':
-					flags |= e_iterations;
+					flags |= f_iterations;
 					break;
 				case 'T':
 				case 't':
-					flags |= e_total;
+					flags |= f_total;
 					break;
 				case 'A':
 				case 'a':
-					flags |= e_average;
+					flags |= f_average;
 					break;
 				case 'F':
 				case 'f':
-					flags |= e_fastest;
+					flags |= f_fastest;
 					break;
 				case 'S':
 				case 's':
-					flags |= e_slowest;
+					flags |= f_slowest;
 					break;
 			}
 			++pos;
@@ -132,52 +136,56 @@ struct std::formatter<Testing::Benchmark::Result> {
 		return pos;
 	}
 
-	auto format(const Testing::Benchmark::Result& obj, std::format_context& ctx) {
-		const bool silent = flags & e_silent;
-		if (!flags || (flags == e_silent)) {
+	template<class FormatContext>
+	auto format(const Testing::Benchmark::Result& obj, FormatContext& ctx) {
+		const bool silent = flags & f_silent;
+		if (!flags || (flags == f_silent)) {
 			return std::format_to(ctx.out(),
-								  "{}{:>8}, "
-								  "{}{}, "
-								  "{}{}, "
-								  "{}{}, "
-								  "{}{}",
-								  silent ? "" : "iterations=",	obj.iterations,
-								  silent ? "" : "total=",		std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_total),
-								  silent ? "" : "average=",		std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_average),
-								  silent ? "" : "fastest=",		std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_least),
-								  silent ? "" : "slowest=",		std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_most));
+									"{}{:>8}, "
+									"{}{}, "
+									"{}{}, "
+									"{}{}, "
+									"{}{}",
+									silent ? "" : "iterations=", obj.iterations,
+									silent ? "" : "total=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_total),
+									silent ? "" : "average=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_average),
+									silent ? "" : "fastest=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_least),
+									silent ? "" : "slowest=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_most)
+								);
 		}
 
 		auto output = ctx.out();
 		bool require_comma = false;
-		if (flags & e_iterations) {
+		if (flags & f_iterations) {
 			output = std::format_to(ctx.out(), "{}{}{:>8}", require_comma ? ", " : "", silent ? "" : "iterations=", obj.iterations);
 			require_comma = true;
 		}
-		if (flags & e_total) {
-			output = std::format_to(ctx.out(), "{}{}{}"   , require_comma ? ", " : "", silent ? "" : "total=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_total));
+		if (flags & f_total) {
+			output = std::format_to(ctx.out(), "{}{}{}", require_comma ? ", " : "", silent ? "" : "total=",
+									std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_total)
+									);
 			require_comma = true;
 		}
-		if (flags & e_average) {
-			output = std::format_to(ctx.out(), "{}{}{}"   , require_comma ? ", " : "", silent ? "" : "average=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_average));
+		if (flags & f_average) {
+			output = std::format_to(ctx.out(), "{}{}{}", require_comma ? ", " : "", silent ? "" : "average=",
+									std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_average)
+									);
 			require_comma = true;
 		}
-		if (flags & e_fastest) {
-			output = std::format_to(ctx.out(), "{}{}{}"   , require_comma ? ", " : "", silent ? "" : "fastest=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_least));
+		if (flags & f_fastest) {
+			output = std::format_to(ctx.out(), "{}{}{}", require_comma ? ", " : "", silent ? "" : "fastest=",
+									std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_least)
+									);
 			require_comma = true;
 		}
-		if (flags & e_slowest) {
-			output = std::format_to(ctx.out(), "{}{}{}"   , require_comma ? ", " : "", silent ? "" : "slowest=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_most));
+		if (flags & f_slowest) {
+			output = std::format_to(ctx.out(), "{}{}{}", require_comma ? ", " : "", silent ? "" : "slowest=",
+									std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_most)
+									);
 			require_comma = true;
 		}
 
 		return output;
 	}
-};
 
-// TODO: VSO-1582358 WA until standard library modules will be used
-//namespace std::chrono {
-//	export
-//	template <class _Ty>
-//	[[nodiscard]] tm _Fill_tm(const _Ty& _Val);
-//}
+};

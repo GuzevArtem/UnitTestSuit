@@ -1,15 +1,3 @@
-module;
-
-//#pragma warning( push )
-//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
-//#include <string>
-//#include <exception>
-//#include <vector>
-//#include <array>
-//#include <any>
-//#include <type_traits>
-//#pragma warning( pop )
-
 export module Testing:TestContext;
 
 import std;
@@ -19,10 +7,41 @@ import :TestException;
 
 export namespace Testing {
 
+	export struct ControlledObjectProxy {
+		constexpr virtual ~ControlledObjectProxy() noexcept {}
+	};
+
+	export
+	template<typename T>
+	struct ControlledObject : public ControlledObjectProxy {
+		T* value;
+
+		template<typename... Args>
+		constexpr ControlledObject(Args... args) { value = new T(args...); }
+		constexpr ControlledObject(const ControlledObject& other) : value(other.value) {}
+		constexpr ControlledObject(ControlledObject&& other) : value(std::move(other.value)) {}
+
+		constexpr virtual ~ControlledObject() {
+			delete value;
+		}
+
+		constexpr ControlledObject& operator=(const ControlledObject& other) = default;
+		constexpr ControlledObject& operator=(ControlledObject&& other) = default;
+
+		constexpr ControlledObject& operator=(const T*& other) {
+			value = other;
+			return *this;
+		}
+		constexpr ControlledObject& operator=(T*&& other) {
+			value = other;
+			return *this;
+		}
+	};
+
 	export class TestContext : public TestContextInterface {
 	private:
 		mutable UnitTestInterface* m_owner;
-		std::vector<std::any> m_controlledObjects;
+		std::vector<ControlledObjectProxy*> m_controlledObjects;
 		TestState m_state;
 
 	public:
@@ -48,8 +67,7 @@ export namespace Testing {
 
 		template<typename T, typename... Args >
 		constexpr T* createTestObjectPointed(Args&&... args) {
-			T* obj = &m_controlledObjects.emplace_back(std::make_any<T>(std::forward<Args>(args)...));
-			return obj;
+			return static_cast<ControlledObject<T>*>(m_controlledObjects.push_back(new ControlledObject<T>(args...)))->value;
 		}
 
 		template<typename T, size_t Count>
@@ -145,8 +163,7 @@ export namespace Testing {
 
 		template<class... Args >
 		constexpr Type* createTestObjectPointed(Args&&... args) {
-			Type* obj = &m_controlledObjects.emplace_back(std::make_any<Type>(std::forward<Args>(args)...));
-			return obj;
+			return static_cast<ControlledObject<Type>*>(m_controlledObjects.push_back(new ControlledObject<Type>(args...)))->value;
 		}
 	};
 }

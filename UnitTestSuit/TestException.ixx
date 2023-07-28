@@ -1,34 +1,3 @@
-module;
-
-//#pragma warning( push )
-//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
-//#include <string>
-//
-//#if !defined(_HAS_CXX23) || !_HAS_CXX23
-//#pragma warning( push )
-//#pragma warning( disable : 5202 ) // warning C5202: a global module fragment can only contain preprocessor directives
-//namespace std {
-//	class stacktrace {
-//	public:
-//		static stacktrace current(size_t framesToSkip = 0) {
-//			return {};
-//		}
-//	};
-//
-//	std::string to_string(stacktrace trace) {
-//		return "C++23 required for stacktrace!";
-//	}
-//}
-//#pragma warning( pop )
-//#else 
-//#include <stacktrace>
-//#endif
-//
-//#include <format>
-//#include <vector>
-//#include <exception>
-//#pragma warning( pop )
-
 export module Testing:TestException;
 
 import std;
@@ -87,7 +56,12 @@ export namespace Testing {
 		std::string m_message;
 	public:
 		CollectedException(const std::string& message = {}) : m_caused(), m_message(message) {}
-		CollectedException(const std::vector<BaseException>& caused, const std::string& message = {}) : m_caused(caused), m_message(message) {}
+		CollectedException(const std::vector<BaseException>& caused, const std::string& message = {}) : m_message(message) {
+			m_caused.resize(caused.size());
+			for (const BaseException& e : caused) {
+				m_caused.emplace_back(e.reason());
+			}
+		}
 
 		virtual const char* name() const { return "CollectedException"; }
 
@@ -98,7 +72,7 @@ export namespace Testing {
 											 m_message.size() ? "\n" : "",
 											 name(),
 											 m_caused.empty() ? ": Execution skipped!" : ":");
-			for (BaseException e : m_caused) {
+			for (const BaseException& e : m_caused) {
 				result.append(std::format("\n\nCaused by: {}", e.reason()));
 			}
 			return result;
@@ -106,10 +80,6 @@ export namespace Testing {
 
 		[[nodiscard]] bool hasAny() const noexcept {
 			return !m_caused.empty();
-		}
-
-		[[nodiscard]] virtual std::stacktrace where() const noexcept {
-			return std::stacktrace::current();
 		}
 	};
 

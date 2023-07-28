@@ -14,7 +14,7 @@ Stacktraces will be available in c\++23.
 
 ## Usage
 
-> * c++20 or newer required.
+> * c++23 or newer required.
 > * Module support required.
 
 ### Add to project

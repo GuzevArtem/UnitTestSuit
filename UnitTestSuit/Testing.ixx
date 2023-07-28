@@ -9,7 +9,7 @@ export import :TestClass;
 export import :TestContext;
 export import :TestException;
 export import :UnitTest;
-export import :Benchmark;
+export import Testing.Benchmark;
 export import Testing.Utils;
 export import TypeParse;
 

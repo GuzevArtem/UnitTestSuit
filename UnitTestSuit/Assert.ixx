@@ -1,13 +1,3 @@
-module;
-
-//#pragma warning( push )
-//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
-//#include <exception>
-//#include <vector>
-//#include <string>
-//#include <format>
-//#pragma warning( pop )
-
 export module Testing:Assert;
 
 import std.compat;
@@ -192,7 +182,7 @@ export namespace Testing {
 	public:
 		AssertNotSameException(std::string message = {}) : inherited(message) {}
 
-		[[nodiscard]] virtual std::string reason() const override { //TODO requires TypeParse::name to exist
+		[[nodiscard]] virtual std::string reason() const override {
 			return std::format("AssertNotSameException: expected {} to be same type as {}\n{}", helper::TypeParse<T1>::name, helper::TypeParse<T2>::name, inherited::reason());
 		}
 	};
@@ -338,22 +328,35 @@ export namespace Testing {
 		AssertInheritenceException(std::string message = {}) : inherited(message) {}
 
 	public:
-		[[nodiscard]] virtual std::string reason() const override { //TODO requires TypeParse::name to exist
+		[[nodiscard]] virtual std::string reason() const override {
 			return std::format("AssertInheritenceException: expected {} to base class of {}\n{}", helper::TypeParse<Base>::name, helper::TypeParse<Derived>::name, inherited::reason());
 		}
 	};
 
+
 	export
-		class AssertOrException : public AssertException {
+		class AssertCausedException : public AssertException {
 		typedef AssertException inherited;
-		private:
+		protected:
 			std::vector<BaseException> m_caused;
 
 		public:
-			AssertOrException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(message), m_caused(caused) {}
+			AssertCausedException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(message) {
+				for (const BaseException& e : caused) {
+					m_caused.emplace_back(e.reason());
+				}
+			}
+	};
+
+	export
+		class AssertOrException : public AssertCausedException {
+		typedef AssertCausedException inherited;
+
+		public:
+			AssertOrException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(caused, message) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
-				std::string result = ("AssertOrException: all executions failed");
+				std::string result("AssertOrException: all executions failed");
 				for (const BaseException& e : m_caused) {
 					result.append(std::format("\n\t\tCaptured: {}", e.reason()));
 				}
@@ -362,13 +365,11 @@ export namespace Testing {
 	};
 
 	export
-		class AssertNorException : public AssertException {
-		typedef AssertException inherited;
-		private:
-			std::vector<BaseException> m_caused;
+		class AssertNorException : public AssertCausedException {
+		typedef AssertCausedException inherited;
 
 		public:
-			AssertNorException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(message), m_caused(caused) {}
+			AssertNorException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(caused, message) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertNorException: not all expected exceptions were captured.");
@@ -380,13 +381,11 @@ export namespace Testing {
 	};
 
 	export
-		class AssertAndException : public AssertException {
-		typedef AssertException inherited;
-		private:
-			std::vector<BaseException> m_caused;
+		class AssertAndException : public AssertCausedException {
+		typedef AssertCausedException inherited;
 
 		public:
-			AssertAndException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(message), m_caused(caused) {}
+			AssertAndException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(caused, message) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertAndException: at least one execution failed");
@@ -398,13 +397,11 @@ export namespace Testing {
 	};
 
 	export
-		class AssertNandException : public AssertException {
-		typedef AssertException inherited;
-		private:
-			std::vector<BaseException> m_caused;
+		class AssertNandException : public AssertCausedException {
+		typedef AssertCausedException inherited;
 
 		public:
-			AssertNandException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(message), m_caused(caused) {}
+			AssertNandException(const std::vector<BaseException>& caused, std::string message = {}) : inherited(caused, message) {}
 
 			[[nodiscard]] virtual std::string reason() const override {
 				std::string result = ("AssertNandException: not all exceptions were captured");
@@ -1005,7 +1002,7 @@ export namespace Testing {
 				} catch (const BaseException& e) {
 					capturedExceptions.push_back(e);
 				} catch (const std::exception& e) {
-					if (t_CaptureAllExceptions) {
+					if constexpr (t_CaptureAllExceptions) {
 						capturedExceptions.emplace_back(UnexpectedException(e).reason());
 					} else {
 						throw std::nested_exception();

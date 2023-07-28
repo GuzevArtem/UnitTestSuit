@@ -1,10 +1,3 @@
-
-//#pragma warning( push )
-//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
-//#include <format>
-//#include <chrono>
-//#pragma warning( pop )
-
 import std.compat;
 
 import Testing;
@@ -22,12 +15,14 @@ namespace Testing {
 	public:
 		T value;
 
-		CustomException(T value) : inherited(utils::concat("CustomException", '<', helper::TypeParse<T>::name, '>', " with value ", '[', std::to_string(value), ']', '\n', std::to_string(std::stacktrace::current())).data()), value(value) {
+		CustomException(T value)
+			: inherited(utils::concat("CustomException", '<', helper::TypeParse<T>::name, '>', " with value ", '[', std::to_string(value), ']', '\n', std::to_string(std::stacktrace::current())).data()),
+			value(value) {
 		}
 	};
 
 	template<typename T>
-	static void functionToRaiseException(T arg) noexcept(false) {
+	void functionToRaiseException(T arg) noexcept(false) {
 		throw CustomException(arg);
 	}
 
@@ -174,11 +169,9 @@ namespace Testing {
 					Benchmark::doNotOptimizeAway(obj);
 				};
 				auto result = Benchmark::function(100, foo, object);
-				//std::cout << std::format("100 iterations:   [{}]\n", result);
-				ctx.log(std::format("100 iterations:   [{}]", result));
+				//ctx.log(std::format("100 iterations:   [{}]", std::move(result)));
 				result = Benchmark::function(foo, object);
-				//std::cout << std::format("single iteration: [{}]\n", result);
-				ctx.log(std::format("single iteration: [{}]", result));
+				//ctx.log(std::format("single iteration: [{}]", std::move(result)));
 			});
 
 			this->addBenchmarkTest("BenchmarkedTypedTest", [](TestContextTyped<Type>& ctx) -> void {
@@ -218,7 +211,7 @@ namespace Testing {
 			} catch(const std::exception& e) {
 				actualErrorMessage = std::string(e.what()); // save error message
 				this->addTest("TestWithSameNameException", [this](TestContext& ctx) -> void {
-					const std::string expectedErrorMessage = std::format("Test with name [TestWithSameName] already exists in TestClass [{}].", name());
+					const std::string expectedErrorMessage = std::format("Test with name [TestWithSameName] already exists in TestClass [{}]", name());
 					Assert::isTrue(actualErrorMessage.contains(expectedErrorMessage), std::format("Expecting exception that contains:\n{}\nbut received:\n{}", expectedErrorMessage, actualErrorMessage));
 				});
 			}

@@ -1,13 +1,3 @@
-module;
-
-//#pragma warning( push )
-//#pragma warning( disable : 4355 4365 4625 4626 4820 5202 5026 5027 5039 5220 )
-//#include <format>
-//#include <functional>
-//#include <concepts>
-//#include <string>
-//#pragma warning( pop )
-
 export module Testing:UnitTest;
 
 import std;
@@ -15,7 +5,7 @@ import std;
 import :Interfaces;
 import :TestContext;
 import :TestException;
-import :Benchmark;
+import Testing.Benchmark;
 import :Assert;
 import TypeParse;
 import Testing.Utils;
@@ -149,7 +139,7 @@ export namespace Testing {
 		inline runBenchmarked(functor func, TestViewInterface* view, size_t iterations = 1) : m_func(func), m_view(view), m_iterations(iterations) {}
 
 		inline constexpr void operator()(ContextType& context) const {
-			Benchmark::Result result = Benchmark::function(m_iterations, m_func, context);
+			auto result = Benchmark::function(m_iterations, m_func, context);
 			if (m_view) {
 				if (m_iterations == 1) {
 					m_view->addEntry(ViewLevel::info, std::format("\tTest run time = [{:#t}]\t", result), true);
