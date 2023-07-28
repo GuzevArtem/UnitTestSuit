@@ -113,41 +113,41 @@ export namespace Testing {
 		}
 		virtual void onTestComplete(const UnitTestInterface* test, TestContextInterface* ctx) override {
 			view()->append(ViewLevel::info, "\t");
-			view()->append(ViewLevel::info, std::format("COMPLETED"));
+			view()->append(ViewLevel::info, std::string("COMPLETED"));
 		}
 		virtual void onTestComplete(const UnitTestInterface* test, TestContextInterface* ctx, const IgnoredException& e) override {
 			view()->append(ViewLevel::info, "\t");
-			view()->append(ViewLevel::info, std::format("COMPLETED:"));
+			view()->append(ViewLevel::info, std::string("COMPLETED:"));
 			view()->append(ViewLevel::info, "\t");
-			view()->append(ViewLevel::info, std::format("IGNORING: "));
+			view()->append(ViewLevel::info, std::string("IGNORING: "));
 			view()->startBlock();
 			view()->append(ViewLevel::warning, std::format("{}", e.reason()), true);
 			view()->endBlock();
 		}
 		virtual void onTestStop(const UnitTestInterface* test, TestContextInterface* ctx, const TestStopException& e) override {
 			view()->append(ViewLevel::info, "\t");
-			view()->append(ViewLevel::warning, std::format("STOPPED: "));
+			view()->append(ViewLevel::warning, std::string("STOPPED: "));
 			view()->startBlock();
 			view()->append(ViewLevel::warning, std::format("{}", e.reason()), true);
 			view()->endBlock();
 		}
 		virtual void onTestIgnore(const UnitTestInterface* test, TestContextInterface* ctx, const IgnoredException& e) override {
 			view()->append(ViewLevel::info, "\t");
-			view()->append(ViewLevel::warning, std::format("IGNORED: "));
+			view()->append(ViewLevel::warning, std::string("IGNORED: "));
 			view()->startBlock();
 			view()->append(ViewLevel::warning, std::format("{}", e.reason()), true);
 			view()->endBlock();
 		}
 		virtual void onTestFail(const UnitTestInterface* test, TestContextInterface* ctx, const TestException& te) override {
 			view()->append(ViewLevel::info, "\t");
-			view()->append(ViewLevel::error, std::format("FAIL: "));
+			view()->append(ViewLevel::error, std::string("FAIL: "));
 			view()->startBlock();
 			view()->append(ViewLevel::error, std::format("{}", te.reason()), true);
 			view()->endBlock();
 		}
 		virtual void onTestFail(const UnitTestInterface* test, TestContextInterface* ctx, const std::exception& e) override {
 			view()->append(ViewLevel::info, "\t");
-			view()->append(ViewLevel::error, std::format("FAIL: "));
+			view()->append(ViewLevel::error, std::string("FAIL: "));
 			view()->startBlock();
 			view()->append(ViewLevel::error, std::format("{}", e.what()), true);
 			view()->endBlock();
@@ -211,7 +211,7 @@ export namespace Testing {
 		}
 
 		virtual void printSummary() const override {
-			view()->addEntry(ViewLevel::info, std::format("-----------------------------------------------------------"));
+			view()->addEntry(ViewLevel::info, std::string("-----------------------------------------------------------"));
 			view()->addEntry(ViewLevel::info, std::format("Class [{}] results:", name()));
 			view()->startBlock();
 			view()->addEntry(ViewLevel::info, std::format("Completed tests: {}/{}", m_data.succeededTestsCount, m_data.totalTestsCount));
@@ -219,7 +219,7 @@ export namespace Testing {
 			view()->addEntry(ViewLevel::info, std::format("Ignored tests: {}/{}", m_data.ignoredTestsCount, m_data.totalTestsCount));
 			view()->addEntry(ViewLevel::info, std::format("Stopped tests: {}", m_data.stoppedTestsCount, m_data.totalTestsCount));
 			view()->endBlock();
-			view()->addEntry(ViewLevel::info, std::format("==========================================================="));
+			view()->addEntry(ViewLevel::info, std::string("==========================================================="));
 			view()->update();
 		}
 
