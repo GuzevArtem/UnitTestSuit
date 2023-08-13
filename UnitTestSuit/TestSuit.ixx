@@ -1,10 +1,10 @@
-export module Testing:TestSuit;
+export module Testing.TestSuit;
 
 import std;
 
-import :Interfaces;
-import :TestView;
-import :TestClass;
+import Testing.Interfaces;
+import Testing.TestView;
+import Testing.TestClass;
 
 export namespace Testing {
 

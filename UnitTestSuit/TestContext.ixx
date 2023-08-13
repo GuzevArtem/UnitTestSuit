@@ -1,9 +1,9 @@
-export module Testing:TestContext;
+export module Testing.TestContext;
 
 import std;
 
-import :Interfaces;
-import :TestException;
+import Testing.Interfaces;
+import Testing.TestException;
 
 export namespace Testing {
 

@@ -86,8 +86,8 @@ export namespace Testing {
 }
 
 export
-template <>
-struct std::formatter<typename Testing::Benchmark::Result> {
+template<>
+struct std::formatter<Testing::Benchmark::Result> : std::formatter<string_view> {
 
 private:
 	size_t flags = 0;
@@ -102,8 +102,7 @@ private:
 	};
 
 public:
-	template<class FormatContext>
-	constexpr auto parse(FormatContext& ctx) {
+	constexpr auto parse(std::format_parse_context& ctx) {
 		auto pos = ctx.begin();
 		while (pos != ctx.end() && *pos != '}') {
 			switch (*pos) {
@@ -136,11 +135,13 @@ public:
 		return pos;
 	}
 
-	template<class FormatContext>
-	auto format(const Testing::Benchmark::Result& obj, FormatContext& ctx) {
+	auto format(const Testing::Benchmark::Result& obj, std::format_context& ctx) const {
 		const bool silent = flags & f_silent;
+
+		std::string temp;
+
 		if (!flags || (flags == f_silent)) {
-			return std::format_to(ctx.out(),
+			std::format_to(std::back_inserter(temp),
 									"{}{:>8}, "
 									"{}{}, "
 									"{}{}, "
@@ -151,41 +152,41 @@ public:
 									silent ? "" : "average=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_average),
 									silent ? "" : "fastest=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_least),
 									silent ? "" : "slowest=", std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_most)
-								);
+			);
+			return std::formatter<string_view>::format(temp, ctx);
 		}
 
-		auto output = ctx.out();
+
 		bool require_comma = false;
 		if (flags & f_iterations) {
-			output = std::format_to(ctx.out(), "{}{}{:>8}", require_comma ? ", " : "", silent ? "" : "iterations=", obj.iterations);
+			std::format_to(std::back_inserter(temp), "{}{}{:>8}", require_comma ? ", " : "", silent ? "" : "iterations=", obj.iterations);
 			require_comma = true;
 		}
 		if (flags & f_total) {
-			output = std::format_to(ctx.out(), "{}{}{}", require_comma ? ", " : "", silent ? "" : "total=",
+			std::format_to(std::back_inserter(temp), "{}{}{}", require_comma ? ", " : "", silent ? "" : "total=",
 									std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_total)
-									);
+			);
 			require_comma = true;
 		}
 		if (flags & f_average) {
-			output = std::format_to(ctx.out(), "{}{}{}", require_comma ? ", " : "", silent ? "" : "average=",
+			std::format_to(std::back_inserter(temp), "{}{}{}", require_comma ? ", " : "", silent ? "" : "average=",
 									std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_in_average)
-									);
+			);
 			require_comma = true;
 		}
 		if (flags & f_fastest) {
-			output = std::format_to(ctx.out(), "{}{}{}", require_comma ? ", " : "", silent ? "" : "fastest=",
+			std::format_to(std::back_inserter(temp), "{}{}{}", require_comma ? ", " : "", silent ? "" : "fastest=",
 									std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_least)
-									);
+			);
 			require_comma = true;
 		}
 		if (flags & f_slowest) {
-			output = std::format_to(ctx.out(), "{}{}{}", require_comma ? ", " : "", silent ? "" : "slowest=",
+			std::format_to(std::back_inserter(temp), "{}{}{}", require_comma ? ", " : "", silent ? "" : "slowest=",
 									std::chrono::hh_mm_ss<std::chrono::nanoseconds>(obj.time_spend_at_most)
-									);
+			);
 			require_comma = true;
 		}
 
-		return output;
+		return std::formatter<string_view>::format(temp, ctx);
 	}
-
 };

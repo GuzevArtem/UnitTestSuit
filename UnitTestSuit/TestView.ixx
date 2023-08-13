@@ -1,8 +1,8 @@
-export module Testing:TestView;
+export module Testing.TestView;
 
 import std;
 
-import :Interfaces;
+import Testing.Interfaces;
 
 export namespace Testing {
 
@@ -149,8 +149,8 @@ export namespace Testing {
 	private:
 		struct Entry {
 			std::string data;
-			size_t indent;
-			ViewLevel level;
+			size_t indent = 0;
+			ViewLevel level = ViewLevel::invalid;
 		};
 
 	private:

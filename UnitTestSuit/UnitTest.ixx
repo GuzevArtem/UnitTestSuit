@@ -1,12 +1,12 @@
-export module Testing:UnitTest;
+export module Testing.UnitTest;
 
 import std;
 
-import :Interfaces;
-import :TestContext;
-import :TestException;
+import Testing.Interfaces;
+import Testing.TestContext;
+import Testing.TestException;
 import Testing.Benchmark;
-import :Assert;
+import Testing.Assert;
 import TypeParse;
 import Testing.Utils;
 

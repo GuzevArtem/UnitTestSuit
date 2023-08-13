@@ -24,7 +24,11 @@ export namespace utils {
 
 	public:
 		Return operator() (Args... args) const {
-			(*m_closure)(std::forward<Args>(args)...);
+			if constexpr (std::same_as<Return, void>) {
+				(*m_closure)(std::forward<Args>(args)...);
+			} else {
+				return (*m_closure)(std::forward<Args>(args)...);
+			}
 		}
 	};
 

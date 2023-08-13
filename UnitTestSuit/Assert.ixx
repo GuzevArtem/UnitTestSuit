@@ -1,8 +1,8 @@
-export module Testing:Assert;
+export module Testing.Assert;
 
 import std.compat;
 
-import :TestException;
+import Testing.TestException;
 import TypeParse;
 
 export namespace Testing {

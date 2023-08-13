@@ -1,8 +1,8 @@
-export module Testing:Expected;
+export module Testing.Expected;
 
 import std;
 
-import :TestException;
+import Testing.TestException;
 import TypeParse;
 
 export namespace Testing {

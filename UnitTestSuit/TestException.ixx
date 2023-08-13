@@ -1,4 +1,4 @@
-export module Testing:TestException;
+export module Testing.TestException;
 
 import std;
 

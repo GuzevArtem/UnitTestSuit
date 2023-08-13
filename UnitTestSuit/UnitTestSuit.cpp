@@ -165,13 +165,13 @@ namespace Testing {
 			this->addTest("TypedTestWithBenchmarkIn", [](TestContextTyped<Type>& ctx) -> void {
 				Type object = ctx.createTestObject();
 				auto foo = [](Type& obj) mutable {
-					std::this_thread::sleep_for(std::chrono::nanoseconds(static_cast<uint64_t>(10 * (++obj))));
+					std::this_thread::sleep_for(std::chrono::nanoseconds(static_cast<uint64_t>(10 * static_cast<uint64_t>(++obj))));
 					Benchmark::doNotOptimizeAway(obj);
 				};
 				auto result = Benchmark::function(100, foo, object);
-				//ctx.log(std::format("100 iterations:   [{}]", std::move(result)));
+				ctx.log(std::format("100 iterations:   [{}]", result));
 				result = Benchmark::function(foo, object);
-				//ctx.log(std::format("single iteration: [{}]", std::move(result)));
+				ctx.log(std::format("single iteration: [{}]", result));
 			});
 
 			this->addBenchmarkTest("BenchmarkedTypedTest", [](TestContextTyped<Type>& ctx) -> void {

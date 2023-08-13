@@ -1,8 +1,8 @@
-export module Testing:Interfaces;
+export module Testing.Interfaces;
 
-import std;
+import std.compat;
 
-import :TestException;
+import Testing.TestException;
 
 export namespace Testing {
 
